@@ -10,7 +10,7 @@ A userscript of usability features for [Cyberspace](https://cyberspace.online) a
 2. Open [cyberspace-atmospheric-modulator.user.js](https://raw.githubusercontent.com/z0mbieparade/cyberspace-atmospheric-modulator/refs/heads/main/cyberspace-atmospheric-modulator.user.js) and choose **Install**.
 3. Reload Cyberspace.
 
-Coming from the Nick Colors userscript? [Move your settings over](https://git.z0m.bi/z0mbi/cyberspace-atmospheric-modulator/wiki/Installing#moving-from-nick-colors), then turn it off.
+Coming from the Nick Colors userscript? Check the wiki to see how to move your settings over.
 
 ## Features
 
@@ -27,7 +27,7 @@ Settings are in the site's **Settings > AtmoMod** tab. Access them via **Setting
 
 ## Documentation
 
-See the [wiki](https://git.z0m.bi/z0mbi/cyberspace-atmospheric-modulator/wiki) for more info.
+See the wiki for more info.
 
 ## License
 
