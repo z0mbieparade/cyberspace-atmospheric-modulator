@@ -1,0 +1,22 @@
+{
+  "name": "cyberspace-atmospheric-modulator",
+  "version": "0.2.0",
+  "description": "Cyberspace Atmospheric Modulator: usability features for [Cyberspace](https://cyberspace.online): undithered images on hover, and colored usernames.",
+  "main": "build.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "build": "node build.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.15",
+    "jsdom": "^27.0.1",
+    "sass": "1.105.1",
+    "terser": "5.51.2",
+    "vitest": "^4.0.15"
+  }
+}

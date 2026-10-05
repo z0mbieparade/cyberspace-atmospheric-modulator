@@ -1,0 +1,172 @@
+// =====================================================
+// NICK COLORS STYLES
+// =====================================================
+
+// The shared dialog, input row, toggle, slider, warning and attribution
+// styles; their colors are the --atmo-* properties initThemeVariables() sets
+@use 'ui';
+
+.atmo-dialog {
+	// Code blocks and debug
+	pre,
+	div.nc-dialog-debug {
+		max-width: 100%;
+		background-color: var(--atmo-code-bg);
+		color: var(--atmo-fg);
+		font-size: calc(var(--font-size-base) * 0.875);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		border: 2px dashed var(--atmo-border);
+	}
+
+	pre {
+		white-space: pre-wrap;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
+	}
+
+	div.nc-dialog-debug {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
+		margin-bottom: var(--spacing-xs);
+
+		> span {
+			display: flex;
+			flex-direction: row;
+			gap: 0.25rem;
+			width: 100%;
+			max-width: 100%;
+			min-width: 0;
+
+			> * {
+				flex: 0 1 auto;
+			}
+
+			> strong {
+				flex: 0 0 auto;
+				font-weight: bold;
+				min-width: calc(10rem * 0.75);
+				text-align: right;
+			}
+		}
+	}
+
+	.nc-debug-color {
+		display: inline-block;
+		padding: 0 0.25em;
+		font-size: 0.75em;
+		border: 1px solid var(--atmo-border);
+	}
+}
+
+// Help dialog content
+.nc-help-content {
+	h4 {
+		margin: var(--spacing-sm) 0 var(--spacing-xs);
+		padding-top: var(--spacing-xs);
+		border-top: 1px dotted var(--atmo-border);
+
+		&:first-child {
+			margin-top: 0;
+			padding-top: 0;
+			border-top: none;
+		}
+	}
+
+	p {
+		margin: 0 0 var(--spacing-xs);
+		color: var(--atmo-fg-dim);
+		font-size: calc(var(--font-size-base) * 0.875);
+		line-height: 1.4;
+	}
+
+	ul {
+		margin: 0 0 var(--spacing-xs);
+		padding-left: 1.25rem;
+		list-style: disc;
+	}
+
+	li {
+		margin: var(--spacing-xs) 0;
+		color: var(--atmo-fg-dim);
+		font-size: calc(var(--font-size-base) * 0.875);
+		line-height: 1.4;
+
+		strong {
+			color: var(--atmo-fg);
+		}
+	}
+}
+
+// Debug tooltip for nick colors
+.nc-debug-tooltip {
+	position: fixed;
+	z-index: 9999999;
+	background: var(--atmo-bg, #0a0a0a);
+	border: 1px solid var(--atmo-border, #333);
+	color: var(--atmo-fg, #e0e0e0);
+	padding: 0.25rem;
+	font-size: 11px;
+	font-family: monospace;
+	max-width: 350px;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.15s;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+
+	&.visible {
+		opacity: 1;
+	}
+}
+
+.nc-debug-row {
+	display: flex;
+	gap: var(--spacing-sm);
+	padding: 0.125rem 0;
+	border-bottom: 1px dotted var(--atmo-border, #333);
+
+	&:last-child {
+		border-bottom: none;
+	}
+}
+
+.nc-debug-label {
+	color: var(--atmo-fg-dim, #888);
+	min-width: 90px;
+	flex-shrink: 0;
+}
+
+.nc-debug-value {
+	color: var(--atmo-fg, #e0e0e0);
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.nc-debug-swatch {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border: 1px solid var(--atmo-border, #333);
+	flex-shrink: 0;
+}
+
+.nc-has-debug {
+	cursor: help;
+}
+
+// =====================================================
+// UPDATE BANNER
+// =====================================================
+
+/* Add a bit of extra theme styling */
+
+html[data-theme="poetry"],
+body[data-theme="poetry"]
+{
+	[data-mention-colored="true"],
+	[data-nick-colored="true"]
+	{
+		border-radius: var(--radius-md);
+	}
+}

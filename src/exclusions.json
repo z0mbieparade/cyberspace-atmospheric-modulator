@@ -1,0 +1,11 @@
+{
+	"_comment": "Single source of truth for where the script is ignored. Keys are the patterns, values are notes. Hosts become @exclude lines in the userscript header (script never loads there, subdomains included). Paths are checked at runtime, so the script still loads but its features stay inert there.",
+	"hosts": {
+		"page.cyberspace.online": "user-authored page subdomain",
+		"terminal.cyberspace.online": "canvas-rendered terminal emulator"
+	},
+	"paths": {
+		"/terminal": "canvas-rendered terminal emulator",
+		"/pages": "user-page editor"
+	}
+}

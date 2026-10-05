@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="64" height="64" shape-rendering="crispEdges" role="img" aria-labelledby="logo-title">
+	<title id="logo-title">Atmospheric Modulator</title>
+	<!-- The z0ylent theme's dimmed green: it reads on light and dark pages alike
+	     (4.5:1 on white, 4.2:1 on GitHub's dark). Not switched by prefers-color-scheme,
+	     which follows the system, not the page's own theme -->
+	<style>rect { fill: #12892d; }</style>
+	<rect x="0" y="7" width="2" height="2"/><rect x="2" y="5" width="2" height="2"/><rect x="4" y="3" width="2" height="2"/>
+	<rect x="6" y="5" width="2" height="2"/><rect x="8" y="9" width="2" height="2"/><rect x="10" y="11" width="2" height="2"/>
+	<rect x="12" y="9" width="2" height="2"/><rect x="14" y="7" width="2" height="2"/>
+</svg>

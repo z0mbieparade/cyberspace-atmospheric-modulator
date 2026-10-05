@@ -1,0 +1,59 @@
+// The shared dialog, input row, toggle, slider, warning and attribution
+// styles; their colors are the --atmo-* properties initThemeVariables() sets
+@use 'ui';
+// Nick colors' own styles: names, tooltips, its dialogs' extras
+@use 'nick-colors/styles';
+// Nick notes' hover tooltip
+@use 'nick-notes/styles' as nick-notes;
+
+// A revealed (undithered) image gets a visible edge so the swap registers.
+.atmo-revealed {
+	outline: 1px solid var(--color-border, #666);
+	// The box is pinned to the dithered size; crop the original to it the way
+	// the dither did rather than stretch it if the aspect ratios differ
+	object-fit: cover;
+}
+
+// The sidebar link to the settings tab: open, its label, at the left;
+// collapsed, its icon alone, centered. Its dashed border is set inline (sidebar-link.js)
+.atmo-sidebar-link {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 0.5rem;
+	padding-inline: 0.5rem;
+	color: inherit;
+	font: inherit;
+
+	&:focus-visible {
+		outline: 2px solid currentColor;
+		outline-offset: 2px;
+	}
+}
+
+.atmo-sidebar-link-icon {
+	display: none;
+	flex-shrink: 0;
+}
+
+.sidebar-minimized .atmo-sidebar-link {
+	justify-content: center;
+}
+
+.sidebar-minimized .atmo-sidebar-link-icon {
+	display: block;
+}
+
+.sidebar-minimized .atmo-sidebar-link-label {
+	display: none;
+}
+
+// The logo before the main section's title on the settings tab: sized to the
+// heading's text, on its baseline
+.atmo-section-icon {
+	display: inline-block;
+	width: 1.25em;
+	height: 1.25em;
+	margin-right: 0.5em;
+	vertical-align: -0.25em;
+}

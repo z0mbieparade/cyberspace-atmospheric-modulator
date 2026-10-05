@@ -1,0 +1,112 @@
+z0ylent
+Foreground: #91ff00
+Background: #060f04
+Dimmed: #12892d
+Border: #12892d
+Code: #51ff46
+Code BG: #0c1c08
+
+Dark
+Foreground: #efe5c0
+Background: #000
+Dimmed: #a89984
+Border: #3a3a3a
+Code: #e0a044
+Code BG: hsla(0,0%,100%,.07)
+
+Light
+Foreground: #000
+Background: #efe5c0
+Dimmed: #3a3a3a
+Border: #a89984
+Code: #941
+Code BG: rgba(0,0,0,.08)
+
+LCD
+Foreground: #000
+Background: #eaeae4
+Dimmed: #3a3a3a
+Border: #9aa49d
+Code: #58625e
+Code BG: #b4c2aa
+
+C64
+Foreground: hsla(0,0%,100%,.75)
+Background: #2a2ab8
+Dimmed: hsla(0,0%,100%,.4)
+Border: hsla(0,0%,100%,.3)
+Code: #acf
+Code BG: hsla(0,0%,100%,.08)
+
+VT320
+Foreground: #ff9a10
+Background: #170800
+Dimmed: #ff9100
+Border: rgba(255,155,0,.27)
+Code: #ffa920
+Code BG: rgba(255,155,0,.05)
+
+Matrix
+Foreground: rgba(160,224,68,.9)
+Background: transparent
+Dimmed: rgba(160,224,68,.5)
+Border: rgba(160,224,68,.4)
+Code: #a0e044
+Code BG: rgba(0,255,65,.08)
+
+Poetry
+Foreground: #222
+Background: #fefaf8
+Dimmed: #666
+Border: transparent
+Code: #2a2a2a
+Code BG: #f0e0dd
+
+Brutalist
+Foreground: #c0d0e8
+Background: #080810
+Dimmed: #99a9bf
+Border: rgba(160,180,220,.18)
+Code: #c0d0e8
+Code BG: rgba(160,180,220,.06)
+
+
+GRiD
+Foreground: #fea813
+Background: #180f06
+Dimmed: #d08c17
+Border: rgba(245,169,28,.22)
+Code: #ffb92e
+Code BG: rgba(245,169,28,.08)
+
+Crypt
+Foreground: #e10
+Background: #100202
+Dimmed: #f00c
+Border: #ff00004d
+Code: red
+Code BG: #f000
+
+Bubblegum
+Foreground: #6b1a4a
+Background: #ffe4f1
+Dimmed: #b86b93
+Border: #f5b5d1
+Code: #c71585
+Code BG: #ffd0e5
+
+Top8
+Foreground: #000
+Background: #fff
+Dimmed: #666
+Border: #69c
+Code: #039
+Code BG: #e6f2ff
+
+System
+Foreground: #efe5c0
+Background: #000
+Dimmed: #a89984
+Border: #3a3a3a
+Code: #e0a044
+Code BG: hsla(0,0%,100%,.07)

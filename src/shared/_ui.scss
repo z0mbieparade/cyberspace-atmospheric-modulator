@@ -1,0 +1,890 @@
+// =====================================================
+// SHARED UI STYLES: dialog, input rows, toggles, sliders
+// =====================================================
+//
+// Use with `@use 'ui';`. Every class and custom property is atmo-prefixed, the
+// same in every script (UI_PREFIX in ui-dialog.js), so the shared UI looks the
+// same wherever it appears.
+//
+// Colors come from custom properties initThemeVariables() (theme-colors.js)
+// sets on :root:
+//   --atmo-bg, -fg, -fg-dim, -border, -code-bg, -inverted-bg, -inverted-fg
+//   --atmo-error, -warn, -success, -info and their -bg variants (alerts)
+
+$p: 'atmo';
+
+// Visible focus for keyboard users (WCAG 2.4.7). The ring uses the fg color,
+// which the theme already keeps readable against bg.
+@mixin focus-ring {
+	outline: 2px solid var(--#{$p}-fg);
+	outline-offset: 2px;
+}
+
+.#{$p}-dialog-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 999999;
+}
+
+.#{$p}-dialog {
+	background: var(--#{$p}-bg);
+	border: 1px solid var(--#{$p}-border);
+	color: var(--#{$p}-fg);
+	max-height: 80vh;
+	display: flex;
+	flex-direction: column;
+
+	&:focus {
+		outline: none;
+	}
+
+	::-webkit-scrollbar-track {
+		background: var(--#{$p}-code-bg);
+		border-radius: 0px;
+		border: none;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: var(--#{$p}-bg);
+		opacity: 0.5;
+		border-radius: 0px;
+		border: none;
+		box-shadow: none;
+		&:hover {
+			opacity: 0.75;
+		}
+		&:active {
+			opacity: 1;
+		}
+	}
+
+	::-webkit-scrollbar-corner {
+		background: var(--#{$p}-bg);
+	}
+
+	::-webkit-scrollbar-button {
+		background: var(--#{$p}-bg);
+	}
+
+	* {
+		scrollbar-width: auto;
+		scrollbar-color: var(--#{$p}-bg) var(--#{$p}-code-bg);
+	}
+}
+
+// The content rules, for a dialog and for a section of the site's settings
+// page (settings-page.js) alike
+.#{$p}-dialog,
+.#{$p}-panel {
+	.spacer {
+		flex: 1;
+	}
+
+	// Typography
+	h3 {
+		margin: 0;
+		color: var(--#{$p}-fg);
+		font-size: var(--font-size-base, 1rem);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	h4 {
+		margin: var(--spacing-xs) 0;
+		color: var(--#{$p}-fg);
+		font-size: var(--font-size-base, 1rem);
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+
+		&:first-child {
+			margin-top: 0;
+			padding-top: 0;
+		}
+	}
+
+	hr {
+		border: 1px dashed var(--#{$p}-border);
+		background: transparent;
+		height: 0;
+		margin: 1rem 0;
+	}
+
+	// Input rows
+	.#{$p}-input-row,
+	.#{$p}-input-row-stacked {
+		padding: var(--spacing-xs) 0;
+		display: flex;
+		flex-direction: row;
+		gap: var(--spacing-sm);
+	}
+
+	.#{$p}-input-row-stacked {
+		flex-direction: column;
+		gap: var(--spacing-xs);
+	}
+
+	.#{$p}-input-row.no-padding-bottom,
+	.#{$p}-input-row-stacked.no-padding-bottom {
+		padding-bottom: 0;
+	}
+
+	.#{$p}-input-row.no-padding-top,
+	.#{$p}-input-row-stacked.no-padding-top {
+		padding-top: 0;
+	}
+
+	.#{$p}-input-row label {
+		font-size: calc(var(--font-size-base) * 0.875);
+		color: var(--#{$p}-fg);
+	}
+
+	// Hints
+	.hint {
+		font-size: calc(var(--font-size-base, 1rem) * 0.875);
+		color: var(--#{$p}-fg-dim);
+	}
+
+	// Buttons
+	.buttons {
+		display: flex;
+		gap: var(--spacing-sm);
+		justify-content: flex-end;
+	}
+
+	button {
+		flex: 1 0 auto;
+		padding: var(--spacing-sm);
+
+		&:hover {
+			border-color: var(--#{$p}-fg-dim);
+		}
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+
+		&.link-brackets {
+			background: none;
+			border: none;
+			padding: 0;
+			color: var(--#{$p}-fg-dim);
+			flex: 0 0 auto;
+			text-transform: uppercase;
+
+			&:hover {
+				border-color: var(--#{$p}-fg);
+			}
+
+			.inner::before {
+				content: "[";
+			}
+
+			.inner::after {
+				content: "]";
+			}
+		}
+
+		// As the site's own buttons: a text-colored border, filled on hover
+		// (its px-4 py-2 text-sm border border-fg rounded-sm hover:bg-fg)
+		&.#{$p}-inline-btn {
+			flex: 0 0 auto;
+			padding: 0.5rem 1rem;
+			font-size: calc(var(--font-size-base) * 0.875);
+			background: transparent;
+			border: 1px solid var(--#{$p}-fg);
+			border-radius: 0.125rem;
+			color: var(--#{$p}-fg);
+			cursor: pointer;
+			transition: background-color 0.15s, color 0.15s;
+
+			&:hover {
+				background: var(--#{$p}-fg);
+				color: var(--#{$p}-bg);
+			}
+		}
+	}
+
+	// A destructive action, in the error color, and one that undoes settings,
+	// in the warning color. Their labels say what they do, so the color is
+	// not the only cue
+	@each $tone, $color in (danger: error, caution: warn) {
+		.#{$p}-#{$tone} .#{$p}-inline-btn {
+			color: var(--#{$p}-#{$color});
+			border-color: var(--#{$p}-#{$color});
+
+			// Filled in the tone, as the others fill in the text color
+			&:hover {
+				background: var(--#{$p}-#{$color});
+				border-color: var(--#{$p}-#{$color});
+				color: var(--#{$p}-bg);
+			}
+		}
+
+		// The footer's bracketed text buttons have no border to color
+		.#{$p}-dialog-footer button.#{$p}-#{$tone} {
+			color: var(--#{$p}-#{$color});
+		}
+	}
+
+	// Form inputs
+	input[type="text"],
+	input[type="number"],
+	textarea,
+	select {
+		width: 100%;
+		padding: var(--spacing-xs) var(--spacing-sm);
+		background: var(--#{$p}-bg);
+		border: 1px solid var(--#{$p}-border);
+		color: var(--#{$p}-fg);
+		font-family: inherit;
+		font-size: var(--font-size-base);
+		box-sizing: border-box;
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+	}
+
+	textarea {
+		min-height: 70px;
+		resize: vertical;
+	}
+
+	// Toggle: a visually hidden native checkbox, then the visible track. The
+	// track is drawn by a second label, so clicking it toggles the checkbox
+	.#{$p}-toggle {
+		display: flex;
+		margin: var(--spacing-xs) 0;
+	}
+
+	.#{$p}-toggle-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.75rem;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+
+	.#{$p}-toggle-value {
+		font-size: var(--font-size-base);
+		color: var(--#{$p}-fg-dim);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.#{$p}-toggle-track {
+		position: relative;
+		width: 2.5rem;
+		height: 1.25rem;
+		border: 1px solid var(--#{$p}-border);
+		border-radius: var(--radius-md);
+		transition: background-color 0.15s;
+
+		&.active {
+			background: var(--#{$p}-fg);
+		}
+
+		&:not(.active) {
+			background: var(--#{$p}-fg-dim);
+		}
+	}
+
+	.#{$p}-sr-only:focus-visible + .#{$p}-toggle-label .#{$p}-toggle-track {
+		@include focus-ring;
+	}
+
+	.#{$p}-sr-only:disabled + .#{$p}-toggle-label {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+
+	.#{$p}-toggle-thumb {
+		position: absolute;
+		top: 2px;
+		width: 1rem;
+		height: 0.875rem;
+		background: var(--#{$p}-bg);
+		border-radius: var(--radius-md);
+		transition: transform 0.15s;
+
+		&.pos-start {
+			transform: translateX(2px);
+		}
+
+		&.pos-middle {
+			transform: translateX(10px);
+		}
+
+		&.pos-end {
+			transform: translateX(20px);
+		}
+	}
+
+	// Screen reader only
+	.#{$p}-sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		border: 0;
+	}
+
+	// Text utilities
+	.#{$p}-text-dim {
+		color: var(--#{$p}-fg-dim);
+	}
+
+	// Attribution row: author links and version, divided by rules
+	.#{$p}-dialog-attribution {
+		width: 100%;
+		display: flex;
+		justify-content: right;
+		gap: var(--spacing-xs);
+		border-top: 1px dotted var(--#{$p}-border);
+		margin-top: var(--spacing-xs);
+		padding-top: var(--spacing-xs);
+		font-size: calc(var(--font-size-base) * 0.875);
+		line-height: calc(var(--font-size-base) * 0.875);
+		color: var(--#{$p}-fg-dim);
+
+		> span 
+		{
+			flex: 0 0 auto;
+			border-right: 1px solid var(--#{$p}-border);
+			padding-right: var(--spacing-xs);
+			margin-right: var(--spacing-xs);
+
+			&:last-child 
+			{
+				border-right: none;
+				padding-right: 0;
+				margin-right: 0;
+			}
+		}
+
+		// Underlined: in the same color as the text around them, links need a
+		// second cue (WCAG 1.4.1)
+		a {
+			color: var(--#{$p}-fg-dim);
+			text-decoration: underline;
+
+			&.github-link
+			{
+				height: calc(var(--font-size-base) * 0.875);
+			}
+		}
+	}
+
+	.#{$p}-dialog-error,
+	.#{$p}-dialog-warning,
+	.#{$p}-dialog-success,
+	.#{$p}-dialog-info {
+		font-size: calc(var(--font-size-base) * 0.875);
+		line-height: calc(var(--line-height-base) * 0.875);
+		padding: var(--spacing-xs) var(--spacing-sm);
+	}
+
+	// Alert boxes
+	.#{$p}-dialog-error {
+		color: var(--#{$p}-error);
+		background-color: var(--#{$p}-error-bg);
+		border: 1px dashed var(--#{$p}-error);
+	}
+
+	.#{$p}-dialog-warning {
+		color: var(--#{$p}-warn);
+		background-color: var(--#{$p}-warn-bg);
+		border: 1px dashed var(--#{$p}-warn);
+
+		// The warn pair is contrast-checked; the site's link color is not
+		a {
+			color: inherit;
+			text-decoration: underline;
+		}
+	}
+
+	.#{$p}-dialog-success {
+		color: var(--#{$p}-success);
+		background-color: var(--#{$p}-success-bg);
+		border: 1px dashed var(--#{$p}-success);
+	}
+
+	.#{$p}-dialog-info {
+		color: var(--#{$p}-info);
+		background-color: var(--#{$p}-info-bg);
+		border: 1px dashed var(--#{$p}-info);
+	}
+
+	// Layout utilities
+	.#{$p}-flex {
+		display: flex;
+	}
+
+	.#{$p}-flex-wrap {
+		flex-wrap: wrap;
+	}
+
+	.#{$p}-flex-shrink-0 {
+		flex-shrink: 0;
+	}
+
+	.#{$p}-items-center {
+		align-items: center;
+	}
+
+	.#{$p}-justify-between {
+		justify-content: space-between;
+	}
+
+	.#{$p}-gap-2 {
+		gap: var(--spacing-sm);
+	}
+
+	.#{$p}-gap-3 {
+		gap: 0.75rem;
+	}
+
+	.#{$p}-gap-4 {
+		gap: 1rem;
+	}
+
+	.#{$p}-cursor-pointer {
+		cursor: pointer;
+	}
+}
+
+// Dialog sections
+.#{$p}-dialog-header {
+	padding: var(--spacing-sm);
+	border-bottom: 1px solid var(--#{$p}-border);
+	flex-shrink: 0;
+	width: 100%;
+	box-sizing: border-box;
+	gap: var(--spacing-sm);
+}
+
+.#{$p}-dialog-content {
+	padding: var(--spacing-sm);
+	overflow-y: auto;
+	flex: 1;
+}
+
+.#{$p}-dialog-preview {
+	padding: var(--spacing-xs) var(--spacing-sm);
+	border-bottom: 1px solid var(--#{$p}-border);
+	flex-shrink: 0;
+	background: var(--#{$p}-code-bg);
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-xs);
+
+	.preview,
+	.preview-row {
+		font-size: var(--font-size-base);
+		line-height: var(--line-height-base);
+		margin: 0;
+		border: 1px solid var(--#{$p}-border);
+		padding: var(--spacing-xs) var(--spacing-sm);
+		background: var(--#{$p}-bg);
+		max-height: calc((var(--font-size-h) * 2 * var(--line-height-base)) + (var(--spacing-xs) * 3));
+		overflow: hidden;
+
+		&.preview-inverted {
+			background: var(--#{$p}-inverted-bg);
+			color: var(--#{$p}-inverted-fg);
+		}
+	}
+
+	.preview-row {
+		display: flex;
+		gap: var(--spacing-xs);
+		flex-wrap: wrap;
+		justify-content: space-around;
+	}
+
+	// The settings tab has the width for the rows side by side. They wrap
+	// back to a column on a screen too narrow for two. The rule under them
+	// divides a dialog's preview from its form, which the tab does not need
+	.#{$p}-panel & {
+		flex-flow: row wrap;
+		border-bottom: none;
+
+		.preview-row {
+			flex: 1 1 20rem;
+		}
+	}
+}
+
+.#{$p}-dialog-footer {
+	padding: var(--spacing-sm);
+	border-top: 1px solid var(--#{$p}-border);
+	flex-shrink: 0;
+}
+
+// =====================================================
+// SLIDERS
+// =====================================================
+
+// Each thumb is a native <input type="range">, transparent and laid over the
+// track, so keyboard, touch and assistive tech get real slider semantics. The
+// visible thumb is a decorative sibling positioned where the native one sits;
+// --thumb-w must match between the two (see positionThumb in ui-slider.js).
+.#{$p}-slider {
+	--thumb-w: 14px;
+	position: relative;
+	height: 24px;
+	margin: 0.5rem 0 0.25rem;
+
+	&.#{$p}-slider-simple {
+		--thumb-w: 10px;
+		height: 16px;
+
+		.#{$p}-slider-track {
+			inset: 7px 0;
+			height: 2px;
+			border: none;
+			background: var(--#{$p}-border);
+		}
+
+		.#{$p}-slider-thumb {
+			top: 3px;
+			height: 10px;
+			border-radius: 50%;
+		}
+	}
+
+	&.#{$p}-slider-split {
+		height: 34px;
+
+		.#{$p}-slider-track {
+			top: calc(50% + 1px);
+			bottom: 4px;
+		}
+
+		.#{$p}-slider-track-mapped {
+			display: block !important;
+		}
+
+		.#{$p}-slider-thumb {
+			height: 32px;
+		}
+	}
+}
+
+.#{$p}-slider-track {
+	position: absolute;
+	inset: 4px 0;
+	border: 1px solid var(--#{$p}-border);
+	background: var(--#{$p}-code-bg);
+	box-sizing: border-box;
+}
+
+.#{$p}-slider-track-mapped {
+	display: none;
+	position: absolute;
+	top: 4px;
+	bottom: calc(50% + 1px);
+	left: 0;
+	right: 0;
+	border: 1px solid var(--#{$p}-border);
+	background: var(--#{$p}-code-bg);
+	box-sizing: border-box;
+}
+
+@mixin range-thumb {
+	width: var(--thumb-w);
+	height: 100%;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	cursor: ew-resize;
+	pointer-events: auto;
+	appearance: none;
+}
+
+.#{$p}-slider-input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	opacity: 0;
+	appearance: none;
+	z-index: 3;
+	cursor: pointer;
+
+	&::-webkit-slider-runnable-track {
+		height: 100%;
+		background: transparent;
+	}
+
+	&::-moz-range-track {
+		height: 100%;
+		background: transparent;
+	}
+
+	&::-webkit-slider-thumb {
+		@include range-thumb;
+	}
+
+	&::-moz-range-thumb {
+		@include range-thumb;
+	}
+}
+
+// Two overlapping inputs: only their thumbs take the pointer, so either thumb
+// can be grabbed; a click on the bare track is handled in script
+.#{$p}-slider-range .#{$p}-slider-input {
+	pointer-events: none;
+}
+
+.#{$p}-slider-thumb {
+	position: absolute;
+	top: 0;
+	width: var(--thumb-w);
+	height: 22px;
+	background: var(--#{$p}-fg);
+	border: 2px solid var(--#{$p}-bg);
+	outline: 1px solid var(--#{$p}-border);
+	transform: translateX(-50%);
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 8px;
+	color: var(--#{$p}-bg);
+	user-select: none;
+	pointer-events: none;
+	box-sizing: border-box;
+}
+
+.#{$p}-slider-input:focus-visible + .#{$p}-slider-thumb {
+	@include focus-ring;
+}
+
+.#{$p}-slider-disabled {
+	.#{$p}-slider-input {
+		cursor: default;
+	}
+
+	.#{$p}-slider-thumb {
+		background: var(--#{$p}-fg-dim);
+	}
+}
+
+.#{$p}-slider-labels {
+	display: flex;
+	justify-content: space-between;
+	font-size: calc(var(--font-size-base, 1rem) * 0.625);
+	line-height: calc(var(--font-size-base, 1rem) * 0.625);
+	margin-bottom: var(--spacing-sm);
+
+	&,
+	span,
+	button {
+		color: var(--#{$p}-fg-dim);
+	}
+
+	// The value readouts are buttons that open a number field
+	button {
+		background: none;
+		border: none;
+		padding: 0;
+		font: inherit;
+		cursor: pointer;
+		flex: 0 0 auto;
+
+		&:focus-visible {
+			@include focus-ring;
+		}
+	}
+
+	// More specific than the dialog's full-width form-input rule, which
+	// would otherwise stretch this field across the labels row
+	.#{$p}-dialog & .#{$p}-slider-value-input,
+	& .#{$p}-slider-value-input {
+		width: 4em;
+		text-align: center;
+		font-size: inherit;
+		padding: 0 0.25em;
+		background: var(--#{$p}-bg);
+		border: 1px solid var(--#{$p}-border);
+		color: var(--#{$p}-fg);
+	}
+}
+
+// =====================================================
+// MENU
+// =====================================================
+
+.#{$p}-menu {
+	position: fixed;
+
+	// Focused itself only until an item is picked, and then the item shows
+	// the focus. Kept for keyboard focus, should it ever land here
+	&:focus:not(:focus-visible) {
+		outline: none;
+	}
+
+	// Over the page, under a dialog an item opens (it closes first anyway)
+	z-index: 999998;
+	display: flex;
+	flex-direction: column;
+	padding: var(--spacing-xs, 0.25rem) 0;
+	background: var(--#{$p}-bg);
+	border: 1px solid var(--#{$p}-border);
+	color: var(--#{$p}-fg);
+	font-size: var(--font-size-base, 1rem);
+}
+
+.#{$p}-menu-item {
+	padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+	background: none;
+	border: none;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+
+	// Inverted, so the item under the pointer or focus reads without color
+	&:hover,
+	&:focus-visible {
+		background: var(--#{$p}-fg);
+		color: var(--#{$p}-bg);
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+		outline-offset: -2px;
+	}
+}
+
+// =====================================================
+// UPDATE BANNERS
+// =====================================================
+
+// Every script's banner goes in this one container, so they stack
+.#{$p}-update-banners {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 999998;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	// Only the banners take clicks, not the strip between them
+	pointer-events: none;
+
+	> * {
+		pointer-events: auto;
+	}
+}
+
+.#{$p}-update-banner {
+	width: fit-content;
+	max-width: 100%;
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm, 0.5rem);
+	padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+	background: var(--#{$p}-warn-bg);
+	color: var(--#{$p}-warn);
+	border: 1px solid var(--#{$p}-warn);
+	font-size: calc(var(--font-size-base, 1rem) * 0.875);
+	line-height: calc(var(--line-height-base, 1.5) * 0.875);
+	// Slides in from above the container
+	transform: translateY(-200%);
+	transition: transform 0.35s ease-out;
+
+	&.#{$p}-update-banner-visible {
+		transform: translateY(0);
+	}
+
+	.#{$p}-update-banner-text {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.#{$p}-update-banner-actions {
+		flex: 0 0 auto;
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm, 0.5rem);
+	}
+
+	button.link-brackets {
+		background: none;
+		border: none;
+		padding: 0;
+		color: var(--#{$p}-warn);
+		text-transform: uppercase;
+		cursor: pointer;
+		font-size: inherit;
+		font-family: inherit;
+
+		&:hover {
+			color: var(--#{$p}-fg);
+		}
+
+		.inner::before {
+			content: "[";
+		}
+
+		.inner::after {
+			content: "]";
+		}
+	}
+
+	// Stack on narrow screens rather than crushing the message
+	@media (max-width: 480px) {
+		align-items: flex-start;
+		flex-wrap: wrap;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.#{$p}-update-banner {
+		transition: none;
+	}
+}
+
+// The footer version button
+// In a dialog's footer, and at the top of the settings tab
+.#{$p}-dialog .#{$p}-dialog-attribution .#{$p}-version-link,
+.#{$p}-panel .#{$p}-dialog-attribution .#{$p}-version-link {
+	// A button, so it is keyboard-reachable; drop the dialog button look
+	flex: 0 0 auto;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--#{$p}-fg-dim);
+	font: inherit;
+	cursor: pointer;
+	transition: color 0.15s;
+
+	&:hover {
+		color: var(--#{$p}-fg);
+	}
+
+	&.#{$p}-update-available {
+		color: var(--#{$p}-warn);
+		font-weight: bold;
+
+		&:hover {
+			color: var(--#{$p}-fg);
+		}
+	}
+}

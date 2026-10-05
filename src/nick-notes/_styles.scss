@@ -1,0 +1,28 @@
+// Notes tooltip, under a name with notes
+.nn-tooltip {
+	position: fixed;
+	z-index: 9999999;
+	background: var(--atmo-bg, #0a0a0a);
+	border: 1px solid var(--atmo-border, #333);
+	color: var(--atmo-fg, #e0e0e0);
+	padding: 0.5rem 0.75rem;
+	font-size: var(--font-size-base, 12px);
+	font-family: inherit;
+	max-width: 300px;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	opacity: 0;
+	// Hidden ones must not catch the pointer meant for the page under them
+	visibility: hidden;
+	transition: opacity 0.15s;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+
+	&.visible {
+		opacity: 1;
+		visibility: visible;
+	}
+}
+
+.nn-has-notes {
+	cursor: help;
+}

@@ -1,0 +1,8 @@
+{
+	"hosts": {
+		"page.example.online": "user pages"
+	},
+	"paths": {
+		"/terminal": "canvas terminal"
+	}
+}
