@@ -12,19 +12,21 @@ const SOURCE = readFileSync(join(process.cwd(), 'src', 'features.js'), 'utf8');
 /**
  * Evaluate features.js against a stand-in featureConfig.
  * @param {object} featureConfig
- * @param {{started?: boolean}} [options] - started: run startFeatures, as the core does once it boots
+ * @param {{started?: boolean, storage?: {ready: boolean}}} [options] - started: run
+ *   startFeatures, as the core does once it boots; storage: whether async storage
+ *   has loaded, changeable later
  * @returns {object} the registry's functions, and the config to change
  */
-function load(featureConfig, { started = true } = {}) {
+function load(featureConfig, { started = true, storage = { ready: true } } = {}) {
 	const errors = [];
-	const api = new Function('console', 'featureConfig', `
+	const api = new Function('console', 'featureConfig', 'isGMStorageReady', `
 		'use strict';
 		const LOG_PREFIX = '[Test]';
 		${SOURCE}
-		return { registerFeature, startFeatures, bootFeatures, featuresStorageReady, FEATURES };
-	`)({ error: (...a) => errors.push(a) }, featureConfig);
+		return { registerFeature, startFeatures, bootFeatures, featuresStorageReady, featuresSwitched, FEATURES };
+	`)({ error: (...a) => errors.push(a) }, featureConfig, () => storage.ready);
 	if (started) api.startFeatures();
-	return { ...api, featureConfig, errors };
+	return { ...api, featureConfig, errors, storage };
 }
 
 describe('bootFeatures', () => {
@@ -63,6 +65,16 @@ describe('bootFeatures', () => {
 });
 
 describe('featuresStorageReady', () => {
+	it('boots the rest when one feature fails to reload', () => {
+		const r = load({ a: true, b: true });
+		const boot = vi.fn();
+		r.registerFeature({ key: 'a', boot: () => {}, onStorageReady: () => { throw new Error('bad'); } });
+		r.registerFeature({ key: 'b', boot });
+		r.featuresStorageReady();
+		expect(boot).toHaveBeenCalled();
+		expect(r.errors.length).toBe(1);
+	});
+
 	it('tells every feature, then boots one that storage turned on', () => {
 		// The config object as it was before async storage loaded
 		const config = { late: false };
@@ -79,5 +91,40 @@ describe('featuresStorageReady', () => {
 		expect(boot).toHaveBeenCalledTimes(1);
 		r.featuresStorageReady();
 		expect(ready).toHaveBeenLastCalledWith(true);
+	});
+});
+
+describe('async storage', () => {
+	it('boots nothing until storage loads, so a feature switched off never starts', () => {
+		const storage = { ready: false };
+		// The defaults, as read before async storage answers
+		const r = load({ colors: true }, { storage });
+		const boot = vi.fn();
+		r.registerFeature({ key: 'colors', boot });
+		r.bootFeatures();
+		expect(boot).not.toHaveBeenCalled();
+
+		// The stored value arrives: switched off
+		r.featureConfig.colors = false;
+		storage.ready = true;
+		r.featuresStorageReady();
+		expect(boot).not.toHaveBeenCalled();
+	});
+});
+
+describe('featuresSwitched', () => {
+	it('tells a booted feature its switch changed, and no other', () => {
+		const r = load({ a: true, b: false });
+		const switchA = vi.fn();
+		const switchB = vi.fn();
+		r.registerFeature({ key: 'a', boot: () => {}, onSwitch: switchA });
+		r.registerFeature({ key: 'b', boot: () => {}, onSwitch: switchB });
+		r.bootFeatures();
+		const previous = { ...r.featureConfig };
+		r.featureConfig.a = false;
+		r.featureConfig.b = true;
+		r.featuresSwitched(previous);
+		expect(switchA).toHaveBeenCalledWith(false);
+		expect(switchB).not.toHaveBeenCalled();
 	});
 });

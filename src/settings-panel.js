@@ -58,12 +58,12 @@ const SETTINGS_SCHEMA = [
 	]},
 	{ type: 'section', label: 'Nick colors', fields: [
 		{ key: 'nickColors', type: 'toggle', label: 'Give every username its own color', default: DEFAULT_FEATURE_CONFIG.nickColors },
-		{ type: 'hint', text: 'Every user gets a hashed (same everywhere) color applied to their nickname. Turning it off hides its settings and its menu item at once; names keep their colors until the page reloads.' },
+		{ type: 'hint', text: 'Every user gets a hashed (same everywhere) color applied to their nickname. Turning it off hides its settings and its menu item, and takes the colors off every name, at once.' },
 		// The separate script draws its styles into #nc-styles. With both
 		// running, each refresh recolors every name with its own settings (see
 		// DEFAULT_FEATURE_CONFIG)
 		{ type: 'custom', render: () => {
-			if (!document.getElementById('nc-styles')) return null;
+			if (!standaloneNickColorsRunning()) return null;
 			return warningBox('The separate Nick Colors userscript is running too. Turn one of them off.');
 		} },
 	]},
@@ -85,12 +85,14 @@ function settingsField(key) {
 /**
  * Store the form's values: featureConfig, and debugMode when the form has it.
  * Side effects: updates featureConfig in place (other code holds it) and
- * DEBUG, writes them to storage, boots any feature just turned on, and
+ * DEBUG, writes them to storage, tells booted features their switch
+ * changed (featuresSwitched), boots any feature just turned on, and
  * shows or hides the settings tab's sections that follow a switch.
  * @param {Object} values - from the settings engine's getValues()
  */
 function applySettings(values) {
 	const { debugMode, ...features } = values;
+	const previous = { ...featureConfig };
 	Object.assign(featureConfig, features);
 	saveFeatureConfig();
 	// The settings tab's main section has no debugMode: it is in Backup & Troubleshooting
@@ -98,7 +100,8 @@ function applySettings(values) {
 		DEBUG = debugMode;
 		saveDebugMode();
 	}
-	// A feature turned on starts now; one turned off stops on reload
+	// A booted feature hears its switch change; one turned on starts now
+	featuresSwitched(previous);
 	bootFeatures();
 	// A feature's section on the settings tab follows its switch now
 	syncSettingsPage();

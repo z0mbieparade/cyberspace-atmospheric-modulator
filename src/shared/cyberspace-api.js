@@ -126,6 +126,18 @@ async function apiRequest(method, path, body) {
 }
 
 /**
+ * The signed-in user's username.
+ * @returns {Promise<string>}
+ * @throws {Error} when not signed in, when Cyberspace refuses, or when its
+ *   answer has no username; ApiUncertainError when it cannot be reached
+ */
+async function fetchOwnUsername() {
+	const me = await apiRequest('GET', '/users/me');
+	if (typeof me?.username !== 'string' || !me.username) throw new Error('Cyberspace did not say who is signed in.');
+	return me.username;
+}
+
+/**
  * Poke a user as the signed-in user: the same nudge as the [P] Poke button
  * on their profile. Cyberspace allows one an hour, across all users.
  * Side effects: sends the user a poke notification.

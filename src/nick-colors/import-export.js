@@ -35,6 +35,8 @@ function exportSettings() {
 		data.customNickColors = customNickColors;
 	}
 
+	if (nickFriends.enabled || nickFriends.users.length) data.nickFriends = nickFriends;
+
 	return data;
 }
 
@@ -135,17 +137,19 @@ function withImportedNotes(styles, raw) {
 
 /**
  * Import settings from a JSON object
- * Side effects: replaces siteConfig and the custom colors, and saves them;
- * with recolor, recolors the page.
+ * Side effects: replaces siteConfig, the custom colors and the friends list
+ * (nickFriends), and saves them; with recolor, recolors the page.
  * @param {Object} data - The imported data
- * @param {{recolor?: boolean, replaceAll?: boolean}} [options] - recolor: off
- *   when nick colors has not booted, so names stay uncolored while the
- *   feature is off; replaceAll: settings and per-user styles the data leaves
- *   out go back to their defaults, as a restore should
+ * @param {{recolor?: boolean, replaceAll?: boolean, keepFriends?: boolean}} [options] -
+ *   recolor: off when nick colors has not booted, so names stay uncolored
+ *   while the feature is off; replaceAll: settings, per-user styles and
+ *   friends the data leaves out go back to their defaults, as a restore
+ *   should; keepFriends: leave the friends list as it is, for a file from
+ *   the separate Nick Colors script, which has none
  * @returns {{ success: boolean, message: string, dropped?: number }} dropped:
  *   per-user style properties left out as unsafe to import
  */
-function importSettings(data, { recolor = true, replaceAll = false } = {}) {
+function importSettings(data, { recolor = true, replaceAll = false, keepFriends = false } = {}) {
 	try {
 		if (!data || typeof data !== 'object') {
 			return { success: false, message: 'Invalid data format' };
@@ -172,6 +176,7 @@ function importSettings(data, { recolor = true, replaceAll = false } = {}) {
 		if (replaceAll) {
 			data.siteConfig = data.siteConfig ?? {};
 			data.customNickColors = data.customNickColors ?? {};
+			data.nickFriends = data.nickFriends ?? {};
 		}
 
 		// Import site config (mutate in place to preserve references)
@@ -193,6 +198,8 @@ function importSettings(data, { recolor = true, replaceAll = false } = {}) {
 			replaceCustomNickColors(withImportedNotes(styles, data.customNickColors));
 			dropUserNotes();
 		}
+
+		if (data.nickFriends && !keepFriends) replaceNickFriends(data.nickFriends);
 
 		if (recolor) colorizeAll();
 		const migrationNote = isV1 ? ' (migrated from v1)' : '';
@@ -245,6 +252,7 @@ const KEY_MAP = {
 	// Config sections
 	siteConfig: 'sc',
 	customNickColors: 'cnc',
+	nickFriends: 'nf',
 	version: 'v',
 	exportedAt: 'at'
 };
@@ -333,7 +341,8 @@ function showNickColorsImportDialog(onImported) {
 	 */
 	const finish = (data, err) => {
 		// As its warning says: it replaces, so what the export leaves out goes back to default
-		const result = err ? { success: false, message: err.message } : importSettings(data, { replaceAll: true });
+		// Nick Colors has no friends list: the one here stays
+		const result = err ? { success: false, message: err.message } : importSettings(data, { replaceAll: true, keepFriends: true });
 		if (!result.success) {
 			const error = document.createElement('div');
 			error.className = uiClass('dialog-error');

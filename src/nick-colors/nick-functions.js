@@ -3,15 +3,31 @@
 // =====================================================
 // src/shared/usernames.js finds and marks the usernames; this styles them.
 
+// On a name this script colored, as opposed to the separate Nick Colors script
+const COLORED_BY_US_ATTR = `data-${UI_PREFIX}-colored`;
+
 /**
- * Style one marked username for its user.
- * Side effects: as applyStyles: inline styles, data attributes, icons.
+ * Style one marked username for its user, or take its styling off: while
+ * nick colors is switched off, or for a non-friend while only friends are
+ * colored.
+ * Side effects: as applyStyles: inline styles, data attributes, icons; or
+ * as unstyleUsername.
  * @param {HTMLElement} element - marked by the username finder
  */
 function styleUsername(element) {
-	applyStyles(element, usernameOf(element), {
+	const username = usernameOf(element);
+	// Switched off, or a non-friend: left in the site's colors. Only names this
+	// script colored lose it. While the separate Nick Colors script runs, none
+	// do: it colors the same names, with the same data attributes, skips any
+	// already colored, and would not color them again
+	if (!featureConfig.nickColors || !shouldColorNick(username)) {
+		if (element.hasAttribute(COLORED_BY_US_ATTR) && !standaloneNickColorsRunning()) unstyleUsername(element);
+		return;
+	}
+	applyStyles(element, username, {
 		matchType: element.hasAttribute(MENTION_ATTR) ? 'mention' : 'nick',
 	});
+	element.setAttribute(COLORED_BY_US_ATTR, '');
 }
 
 /**
@@ -35,6 +51,7 @@ function unstyleUsername(element) {
 		delete element.dataset[key];
 	}
 	element.style.cssText = '';
+	element.removeAttribute(COLORED_BY_US_ATTR);
 }
 
 /**

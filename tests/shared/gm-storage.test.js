@@ -29,7 +29,7 @@ function loadStorageShim({ GM_getValue, GM_setValue, GM, localStorage, console: 
 		function onGMStorageReady() { readyCalls++; }
 		${GM_STORAGE_SOURCE}
 		return { _GM_getValue, _GM_setValue, _hasSyncGM, _hasAsyncGM, _initGMCache, _gmCache,
-			readyCalls: () => readyCalls };`
+			isGMStorageReady, readyCalls: () => readyCalls };`
 	);
 	return factory(GM_getValue, GM_setValue, GM, localStorage, consoleMock ?? console);
 }
@@ -155,9 +155,11 @@ describe('GM storage shim', () => {
 			});
 
 			expect(shim.readyCalls(), 'before hydration').toBe(0);
+			expect(shim.isGMStorageReady(), 'not ready before hydration').toBe(false);
 			await flushHydration();
 
 			expect(shim.readyCalls()).toBe(1);
+			expect(shim.isGMStorageReady()).toBe(true);
 			expect(store.debugMode, 'migrated from localStorage').toBe('true');
 			expect(shim._GM_getValue('debugMode', null), 'readable through the cache').toBe('true');
 		});
@@ -178,6 +180,33 @@ describe('GM storage shim', () => {
 
 			expect(shim.readyCalls(), 'ready ran despite the failed migration').toBe(1);
 			expect(errors.some(([msg]) => String(msg) === '[Test] Failed to migrate storage:')).toBe(true);
+		});
+	});
+
+	describe('a cache that fails to load', () => {
+		it('still becomes ready, on defaults, so the script is not stuck unbooted', async () => {
+			const errors = [];
+			const shim = loadStorageShim({
+				GM: {
+					getValue: async () => { throw new Error('storage gone'); },
+					setValue: async () => {},
+				},
+				localStorage,
+				console: { log: () => {}, warn: () => {}, error: (...a) => errors.push(a) },
+			});
+
+			await flushHydration();
+
+			expect(shim.isGMStorageReady()).toBe(true);
+			expect(shim.readyCalls()).toBe(1);
+			expect(errors.some(([msg]) => String(msg) === '[Test] Failed to load GM cache:')).toBe(true);
+		});
+	});
+
+	describe('readiness with sync storage', () => {
+		it('is ready at once', () => {
+			const shim = loadStorageShim({ GM_getValue: (k, d) => d, GM_setValue: () => {}, localStorage });
+			expect(shim.isGMStorageReady()).toBe(true);
 		});
 	});
 

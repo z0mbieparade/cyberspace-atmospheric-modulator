@@ -217,3 +217,19 @@ describe('the Nick Colors section, on the settings tab', () => {
 		expect(nickSection()).not.toBeNull();
 	});
 });
+
+describe('applySettings', () => {
+	it('tells a running feature at once when its switch is turned off', () => {
+		const calls = [];
+		featureConfig.switchProbe = true;
+		registerFeature({ key: 'switchProbe', boot: () => {}, onSwitch: on => calls.push(on) });
+		startFeatures();
+		try {
+			applySettings({ ...featureConfig, switchProbe: false });
+			expect(calls).toEqual([false]);
+		} finally {
+			FEATURES.splice(FEATURES.findIndex(f => f.key === 'switchProbe'), 1);
+			delete featureConfig.switchProbe;
+		}
+	});
+});

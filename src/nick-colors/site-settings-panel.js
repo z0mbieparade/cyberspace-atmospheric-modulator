@@ -110,7 +110,7 @@ function renderSiteSettingsSection(body) {
 	const resetId = uiId('nick-colors-reset');
 	const clearId = uiId('nick-colors-clear-custom');
 	body.innerHTML = `
-		<div class="hint">Changes save as you make them. Per-user colors: right-click a username and choose Color.</div>
+		<div class="hint">Changes save as you make them. Per-user colors: right-click a username and ${COLOR_MENU_HOWTO}.</div>
 		<div class="atmo-dialog-preview">${preview}</div>
 		${content}
 		${createInputRow({
@@ -118,7 +118,7 @@ function renderSiteSettingsSection(body) {
 			id: resetId,
 			// Undoes the section's settings: in the warning color, and asks first
 			classes: uiClass('caution'),
-			label: 'Put the settings above back to the selected preset, or with none selected to the site theme\'s. Per-user colors and notes stay.',
+			label: 'Put the color settings back to the selected preset, or with none selected to the site theme\'s. Friends, per-user colors and notes stay.',
 			buttonText: 'Reset to Preset',
 		})}
 		${createInputRow({
@@ -135,9 +135,14 @@ function renderSiteSettingsSection(body) {
 		autoSave: true,
 		onImported: () => renderSiteSettingsSection(body),
 	});
-	body.querySelector('#' + resetId).addEventListener('click', () => confirmAction({
+	const resetButton = body.querySelector('#' + resetId);
+	// Above the color settings: it decides whose names they apply to
+	const friends = document.createElement('div');
+	body.querySelector('[data-settings-engine]').before(friends);
+	renderNickFriendsSettings(friends);
+	resetButton.addEventListener('click', () => confirmAction({
 		title: 'Reset to preset?',
-		message: `This puts the nick color settings above back to the selected preset, or with none selected to the site theme's. Per-user colors, notes and the ${SETTINGS_TITLE} section stay.`,
+		message: `This puts the nick color settings back to the selected preset, or with none selected to the site theme's. Friends, per-user colors, notes and the ${SETTINGS_TITLE} section stay.`,
 		confirmLabel: 'RESET',
 		tone: 'caution',
 		onConfirm: () => form.reset(),

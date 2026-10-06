@@ -57,6 +57,8 @@ runAndExpose(code, [
 	// Features
 	'FEATURES',
 	'startFeatures',
+	'registerFeature',
+	'applySettings',
 
 	// Settings panel
 	'openSettingsPanel',

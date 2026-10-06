@@ -32,6 +32,6 @@ const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion',
 	// image-undither
 	'unditherMissedPage',
 	// nick-colors
-	'siteConfig', 'customNickColors',
+	'siteConfig', 'customNickColors', 'nickFriends',
 	// nick-notes
 	'nickNotes'];

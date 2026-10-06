@@ -24,6 +24,7 @@ registerFeature({
 	onStorageReady(booted) {
 		loadSiteConfig();
 		loadCustomNickColors();
+		loadNickFriends();
 		if (booted) colorizeAll();
 	},
 
@@ -44,6 +45,8 @@ registerFeature({
 	},
 	debugLog: nickDebugLog,
 	reportSummary: nickReportSummary,
+	// Off takes the colors off every name now; on puts them back
+	onSwitch: () => colorizeAll(),
 
 	boot() {
 		// This script starts at document-start, before the site's stylesheet:
@@ -53,14 +56,15 @@ registerFeature({
 		loadSiteTheme();
 		initThemeVariables();
 
-		registerUserMenuItem({
-			label: 'Color',
-			order: 10,
-			// Switched off: gone from the menu now, not after a reload
-			showFor: () => featureConfig.nickColors,
-			// Raw styles, so the sliders show the saved values before range mapping
-			onSelect: username => createUserSettingsPanel(username, getRawStylesForPicker(username)),
-		});
+		// Raw styles, so the sliders show the saved values before range mapping
+		const editColor = username => createUserSettingsPanel(username, getRawStylesForPicker(username));
+		// Switched off: gone from the menu now, not after a reload. With only
+		// friends colored, a friend can be edited or removed, anyone else added
+		const friendsOnly = () => featureConfig.nickColors && nickFriends.enabled;
+		registerUserMenuItem({ label: 'Color', order: 10, showFor: () => featureConfig.nickColors && !nickFriends.enabled, onSelect: editColor });
+		registerUserMenuItem({ label: 'Add Color', order: 10, showFor: username => friendsOnly() && !isNickFriend(username), onSelect: username => setNickFriend(username, true) });
+		registerUserMenuItem({ label: 'Edit Color', order: 10, showFor: username => friendsOnly() && isNickFriend(username), onSelect: editColor });
+		registerUserMenuItem({ label: 'Remove Color', order: 11, showFor: username => friendsOnly() && isNickFriend(username), onSelect: username => setNickFriend(username, false) });
 
 		if (registerMenuCommand) {
 			registerMenuCommand('Nick Colors Settings', createSettingsPanel);
@@ -86,6 +90,6 @@ registerFeature({
 			colorizeAll();
 		}).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-		console.log(NICK_LOG_PREFIX + ' Loaded. Right-click or long-press a username, then choose Color, to customize it.');
+		console.log(NICK_LOG_PREFIX + ` Loaded. Right-click or long-press a username, then ${COLOR_MENU_HOWTO}, to customize it.`);
 	},
 });

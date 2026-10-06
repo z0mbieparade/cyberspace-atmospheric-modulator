@@ -87,8 +87,9 @@ function importBackup(data) {
 	}
 	saveFeatureConfig();
 	// Every feature re-reads storage: one may hold what another's part stored,
-	// as nick notes does for notes in an older file's nick colors part. Then a
-	// feature turned on starts now; one turned off stops on reload
+	// as nick notes does for notes in an older file's nick colors part, and
+	// nick colors restyles names to its switch. Then a feature turned on
+	// starts now
 	featuresStorageReady();
 	refreshSettingsSection(SETTINGS_SECTION_KEY);
 

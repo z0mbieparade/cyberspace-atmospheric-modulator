@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **GIFs undither too** - hover or hold a GIF in chat and the original, animated, shows over its dithered canvas
+- **Only color my friends** - a Nick Colors switch, off by default, that colors only the people you add. Their menu gets **Add Color**, or **Edit Color** and **Remove Color**; the settings show them as a wrapped list, each with an × to remove it. Everyone else keeps the site's colors. Turned on with an empty list, it adds you first
+
+### Fixed
+- **A feature switched off still ran after a reload in Greasemonkey** - with storage that loads asynchronously, features started before the saved switches arrived, so they ran with the defaults. Features now wait for storage
+- **Turning nick colors off left names colored until a reload** - names lose their colors at once, and get them back when it is turned on
 
 ## [0.2.1] - 2026-10-06
 

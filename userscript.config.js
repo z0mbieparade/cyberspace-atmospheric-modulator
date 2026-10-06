@@ -76,6 +76,7 @@ module.exports = {
 			'nick-colors/sanitize.js',
 			'nick-colors/helper-functions.js',
 			'nick-colors/header.js',
+			'nick-colors/friends.js',
 			'nick-colors/import-export.js',
 			'nick-colors/debug.js',
 			'nick-colors/nick-style-functions.js',

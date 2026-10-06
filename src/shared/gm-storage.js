@@ -9,8 +9,9 @@
 //                    change it for a published script: migration and the
 //                    fallback look values up by it.
 //   GM_STORAGE_KEYS  the keys the async cache preloads and migration copies
-// Optional: onGMStorageReady(), called once the async cache is populated, so
-// the script can re-read config it loaded with defaults at startup.
+// Optional: onGMStorageReady(), called once the async cache is populated, or
+// failed to load, so the script can re-read config it loaded with defaults at
+// startup.
 
 const _isThenable = (value) => !!value && typeof value.then === 'function';
 
@@ -45,6 +46,19 @@ const _hasAsyncGM = !_hasSyncGM && !!_asyncGetValue && !!_asyncSetValue;
 // before the wrappers below so they don't rely on evaluation order surviving a
 // reorder (TDZ).
 let _gmCache = {};
+
+// False until the async cache has loaded, or failed to: until then a read
+// returns the default, not what is stored
+let _gmStorageReady = !_hasAsyncGM;
+
+/**
+ * Whether reads return stored values yet: always with sync storage, and with
+ * async storage once its cache has loaded (or failed to, leaving defaults).
+ * @returns {boolean}
+ */
+function isGMStorageReady() {
+	return _gmStorageReady;
+}
 
 // Wrapper functions that handle both sync and async APIs uniformly
 // For setValue: fire-and-forget (don't need to wait), also update cache
@@ -127,9 +141,17 @@ if (_hasAsyncGM) {
 			// A rejecting GM.setValue must not drop the config re-read below
 			console.error(LOG_PREFIX + ' Failed to migrate storage:', e);
 		}
-		// Reload config after cache is populated (and possibly migrated)
-		if (typeof onGMStorageReady === 'function') onGMStorageReady();
-	}).catch(e => console.error(LOG_PREFIX + ' Failed to hydrate GM storage:', e));
+	}).finally(() => {
+		// Reload config after cache is populated (and possibly migrated). Also
+		// when loading failed (_initGMCache logs it): the script then runs on
+		// its defaults
+		_gmStorageReady = true;
+		try {
+			if (typeof onGMStorageReady === 'function') onGMStorageReady();
+		} catch (e) {
+			console.error(LOG_PREFIX + ' Failed to start after loading GM storage:', e);
+		}
+	});
 } else if (_hasSyncGM) {
 	// Also migrate for old GM API. It runs in a microtask despite the sync GM
 	// calls, so a throwing GM_setValue surfaces as a rejection, not a throw.

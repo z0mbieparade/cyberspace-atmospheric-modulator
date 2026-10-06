@@ -22,7 +22,7 @@ function showHelpDialog() {
 
 				<h4>Quick Start</h4>
 				<ul>
-					<li><strong>Right-click any username</strong> and choose <strong>Color</strong> to customize its color, icon, or style</li>
+					<li><strong>Right-click any username</strong> and ${COLOR_MENU_HOWTO} to customize its color, icon, or style</li>
 					<li><strong>Use the SETTINGS button</strong> to configure global color ranges and options</li>
 				</ul>
 

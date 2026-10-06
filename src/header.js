@@ -54,6 +54,15 @@ function standaloneNickColorsSelector() {
 	return `[data-nick-colored]:not([${USERNAME_ATTR}]), [data-mention-colored]:not([${USERNAME_ATTR}])`;
 }
 
+/**
+ * Whether the separate Nick Colors userscript runs on this page: it draws its
+ * styles into #nc-styles.
+ * @returns {boolean}
+ */
+function standaloneNickColorsRunning() {
+	return !!document.getElementById('nc-styles');
+}
+
 function loadFeatureConfig() {
 	try {
 		const saved = _GM_getValue('featureConfig', null);
@@ -71,7 +80,7 @@ function saveFeatureConfig() {
 	_GM_setValue('featureConfig', JSON.stringify(featureConfig));
 }
 
-// Called by the shared GM storage once the async cache is populated
+// Called by the shared GM storage once the async cache is populated, or failed to load
 function onGMStorageReady() {
 	loadDebugMode();
 	loadFeatureConfig();

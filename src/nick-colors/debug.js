@@ -44,7 +44,8 @@ function getOrCreateDebugPre(parent, classes = '') {
 
 /**
  * Nick colors' part of the script's debug log: the theme, the settings in
- * effect, the custom colors and overrides, and any debug readouts on the page.
+ * effect, the custom colors, the friends list and its switch, the overrides,
+ * and any debug readouts on the page.
  * @returns {string} plain text, for the debug log file
  */
 function nickDebugLog() {
@@ -62,6 +63,7 @@ function nickDebugLog() {
 	block('EFFECTIVE CONFIG (after site theme integration)', JSON.stringify(getEffectiveSiteConfig(), null, 2));
 	block('SAVED SITE CONFIG', JSON.stringify(siteConfig, null, 2));
 	block(`CUSTOM NICK COLORS (${Object.keys(customNickColors).length} total)`, JSON.stringify(customNickColors, null, 2));
+	block(`FRIENDS (${nickFriends.enabled ? 'only friends colored' : 'everyone colored'})`, nickFriends.users.join(', ') || 'none');
 	block(`MANUAL OVERRIDES (${Object.keys(MANUAL_OVERRIDES).length} total)`, JSON.stringify(MANUAL_OVERRIDES, null, 2));
 
 	// Shown only in debug mode, but always on the page
@@ -76,10 +78,11 @@ function nickDebugLog() {
 
 /**
  * Nick colors' part of an issue report: short, as it goes in a message.
- * @returns {string} e.g. '3 custom | H:0-360 S:70-100 L:55-75 | Settings: {...}'
+ * @returns {string} e.g. '3 custom | friends only (2) | H:0-360 S:70-100 L:55-75 | Settings: {...}'
  */
 function nickReportSummary() {
 	const eff = getEffectiveSiteConfig();
-	return `${Object.keys(customNickColors).length} custom | H:${eff.minHue}-${eff.maxHue} S:${eff.minSaturation}-${eff.maxSaturation} L:${eff.minLightness}-${eff.maxLightness}`
+	const friends = nickFriends.enabled ? ` | friends only (${nickFriends.users.length})` : '';
+	return `${Object.keys(customNickColors).length} custom${friends} | H:${eff.minHue}-${eff.maxHue} S:${eff.minSaturation}-${eff.maxSaturation} L:${eff.minLightness}-${eff.maxLightness}`
 		+ ` | Settings: ${JSON.stringify(minifyKeys({ siteConfig }))}`;
 }
