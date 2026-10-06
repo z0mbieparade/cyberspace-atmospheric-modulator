@@ -127,7 +127,7 @@ function migrateV1ToV2(data) {
 function withImportedNotes(styles, raw) {
 	if (!raw || typeof raw !== 'object') return styles;
 	for (const [username, entry] of Object.entries(raw)) {
-		if (username === '__proto__' || typeof entry?.userNotes !== 'string' || !isValidUsername(username)) continue;
+		if (typeof entry?.userNotes !== 'string' || !isValidUsername(username)) continue;
 		styles[username] = { ...styles[username], userNotes: entry.userNotes };
 	}
 	return styles;
@@ -196,7 +196,7 @@ function importSettings(data, { recolor = true, replaceAll = false } = {}) {
 
 		if (recolor) colorizeAll();
 		const migrationNote = isV1 ? ' (migrated from v1)' : '';
-		return { success: true, dropped, message: `Settings imported successfully${migrationNote}.${droppedStylesNote(dropped)}` };
+		return { success: true, dropped, message: `Settings imported successfully${migrationNote}.${droppedStylesNote(dropped, 'imported')}` };
 	} catch (e) {
 		return { success: false, message: `Import failed: ${e.message}` };
 	}

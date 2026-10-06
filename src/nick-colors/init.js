@@ -33,7 +33,7 @@ registerFeature({
 	importBackup(data, booted) {
 		const result = importSettings(data, { recolor: booted, replaceAll: true });
 		if (result.success) refreshSettingsSection(SETTINGS_SECTION_KEY);
-		return { ...result, notice: droppedStylesNote(result.dropped).trim() };
+		return { ...result, notice: droppedStylesNote(result.dropped, 'imported').trim() };
 	},
 	resetSettings(booted) {
 		// An import of nothing: every setting and per-name style at its default

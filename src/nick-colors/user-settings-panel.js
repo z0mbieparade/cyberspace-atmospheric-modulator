@@ -146,7 +146,10 @@ function createUserSettingsPanel(username, currentStyles)
 		buttons: [
 			{ label: 'Save', class: 'save', onClick: (close) => {
 				// Typed here, so free CSS, but nothing that escapes the name (sanitize.js)
-				customNickColors[username] = sanitizeNickStyle(buildCurrentStyles(), 'typed') ?? {};
+				const typed = buildCurrentStyles();
+				customNickColors[username] = sanitizeNickStyle(typed, 'typed') ?? {};
+				const dropped = countDroppedStyles({ [username]: typed }, customNickColors);
+				if (dropped) alert(`Saved.${droppedStylesNote(dropped, 'typed')}`);
 				saveCustomNickColors();
 				colorizeAll();
 				close();
@@ -545,7 +548,7 @@ function createUserSettingsPanel(username, currentStyles)
 			const userSettings = sanitizeNickStyle(raw, 'imported');
 			if (userSettings) {
 				applyImportedUserSettings(userSettings);
-				alert(`Settings imported!${droppedStylesNote(countDroppedStyles({ [username]: raw }, { [username]: userSettings }))}`);
+				alert(`Settings imported!${droppedStylesNote(countDroppedStyles({ [username]: raw }, { [username]: userSettings }), 'imported')}`);
 			} else {
 				alert(`No valid user settings found in ${source}`);
 			}
@@ -568,6 +571,8 @@ function createUserSettingsPanel(username, currentStyles)
 		// Apply CSS (backgroundColor and other styles)
 		const cssProps = [];
 		if (settings.backgroundColor) cssProps.push(`background-color: ${settings.backgroundColor}`);
+		if (settings.letterSpacing) cssProps.push(`letter-spacing: ${settings.letterSpacing}`);
+		if (settings.textDecoration) cssProps.push(`text-decoration: ${settings.textDecoration}`);
 		if (cssProps.length > 0) {
 			engine.setFieldValue('customCss', cssProps.join(';\n'));
 		}

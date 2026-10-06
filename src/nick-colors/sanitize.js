@@ -24,20 +24,48 @@ const IMPORTED_STYLE_KEYS = [
 
 // What a style typed in the Color dialog's Additional CSS may not set: the
 // properties that move or layer a name (position, offsets, z-index, every
-// transform), generate content, or bind behavior. Not a full containment:
-// size and spacing still apply, as the user typed them
+// transform), generate content, or bind behavior. Lowercase, without hyphens
+// or a vendor prefix, as blockedStyleKey compares them. Not a full
+// containment: size and spacing still apply, as the user typed them
 const BLOCKED_STYLE_KEYS = [
-	'position', 'inset', 'top', 'right', 'bottom', 'left', 'zIndex', 'content',
-	'transform', 'translate', 'scale', 'rotate', 'filter', 'behavior', 'MozBinding', 'data',
+	'position', 'inset', 'top', 'right', 'bottom', 'left', 'zindex', 'content',
+	'transform', 'translate', 'scale', 'rotate', 'filter', 'behavior', 'binding', 'data',
 ];
 
+/**
+ * Whether a typed style key is one BLOCKED_STYLE_KEYS keeps out. It is
+ * compared as the property applyStyles writes, toKebabCase(key), which the
+ * browser lowercases and honors with a vendor prefix: Webkit-transform,
+ * WebkitTransform and -webkit-transform are all transform.
+ * @param {string} key - e.g. 'WebkitTransform', 'z-index', 'offsetPath'
+ * @returns {boolean}
+ */
+function blockedStyleKey(key) {
+	const bare = toKebabCase(key).toLowerCase()
+		.replace(/^-?(webkit|moz|ms|o)-/, '')
+		.replace(/-/g, '');
+	// offset-path and its family move a name along a path; inset-inline-start
+	// and the other logical insets are offsets
+	return BLOCKED_STYLE_KEYS.includes(bare) || bare.startsWith('offset') || bare.startsWith('inset');
+}
+
 // Shown as text beside the name, never as CSS: any characters are safe, so
-// the CSS value check does not apply (an icon like <3 or ¯\\_(ツ)_/¯ stays)
+// the CSS value check does not apply (an icon like <3 or ¯\\_(ツ)_/¯ stays).
+// The length caps apply to imports only: a long icon or value is harmless,
+// so storage keeps what the user typed. Load still drops blocked keys and
+// unsafe values, whoever saved them: storage cannot tell an old import from
+// the user's own typing
 const TEXT_STYLE_KEYS = ['prependIcon', 'appendIcon'];
+const IMPORTED_ICON_MAX = 50;
+const IMPORTED_CSS_VALUE_MAX = 200;
 
 // A value that loads something (url(), image-set()), runs something, or
-// breaks out of its declaration
-const UNSAFE_STYLE_VALUE = /url\s*\(|image-set\s*\(|expression\s*\(|javascript:|\\|[;{}<>]/i;
+// breaks out of its declaration. A line break or other control character
+// counts, but not a tab, which is only whitespace: an imported value
+// lands in the Additional CSS box, which splits lines into declarations.
+// UNSAFE_STYLE_VALUE_TEXT says it to the user
+const UNSAFE_STYLE_VALUE_TEXT = 'url(), image-set(), expression(), javascript:, \\ ; { } < >, a line break or another control character';
+const UNSAFE_STYLE_VALUE = /url\s*\(|image-set\s*\(|expression\s*\(|javascript:|\\|[;{}<>\x00-\x08\x0a-\x1f]/i;
 
 /**
  * A siteConfig with only the known settings, each of its default's type,
@@ -67,8 +95,10 @@ function sanitizeSiteConfig(config) {
  * @param {*} styles - { property: value } as customNickColors or overrides
  *   hold, or a color string (overrides.json's short form)
  * @param {'imported'|'typed'} source - imported: a settings file or
- *   overrides.json, only IMPORTED_STYLE_KEYS; typed: the user's own Color
- *   dialog, anything but BLOCKED_STYLE_KEYS
+ *   overrides.json, only IMPORTED_STYLE_KEYS, within the length caps;
+ *   typed: the user's own Color dialog or storage, anything blockedStyleKey
+ *   allows, any length. Either way, a CSS value matching UNSAFE_STYLE_VALUE
+ *   is dropped
  * @returns {Object|null} the safe style, or null when nothing is left
  */
 function sanitizeNickStyle(styles, source) {
@@ -76,14 +106,17 @@ function sanitizeNickStyle(styles, source) {
 	if (!styles || typeof styles !== 'object' || Array.isArray(styles)) return null;
 	const clean = {};
 	for (const key of Object.keys(styles)) {
-		const allowed = source === 'imported' ? IMPORTED_STYLE_KEYS.includes(key) : !BLOCKED_STYLE_KEYS.includes(key);
+		const imported = source === 'imported';
+		const allowed = imported ? IMPORTED_STYLE_KEYS.includes(key) : !blockedStyleKey(key);
 		if (!allowed || key === '__proto__') continue;
 		const value = styles[key];
 		if (typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) {
 			clean[key] = value;
+		} else if (typeof value !== 'string') {
+			continue;
 		} else if (TEXT_STYLE_KEYS.includes(key)) {
-			if (typeof value === 'string' && value.length <= 50) clean[key] = value;
-		} else if (typeof value === 'string' && value.length <= 200 && !UNSAFE_STYLE_VALUE.test(value)) {
+			if (!imported || value.length <= IMPORTED_ICON_MAX) clean[key] = value;
+		} else if ((!imported || value.length <= IMPORTED_CSS_VALUE_MAX) && !UNSAFE_STYLE_VALUE.test(value)) {
 			clean[key] = value;
 		}
 	}
@@ -100,7 +133,7 @@ function sanitizeNickStyles(colors, source) {
 	const clean = {};
 	if (!colors || typeof colors !== 'object') return clean;
 	for (const [username, styles] of Object.entries(colors)) {
-		if (username === '__proto__' || !isValidUsername(username)) continue;
+		if (!isValidUsername(username)) continue;
 		const safe = sanitizeNickStyle(styles, source);
 		if (safe) clean[username] = safe;
 	}
@@ -108,9 +141,9 @@ function sanitizeNickStyles(colors, source) {
 }
 
 /**
- * How many style properties sanitizing left out, for telling the user: an
- * import of their own backup keeps only the imported list, so Additional CSS
- * beyond it does not come back.
+ * How many style properties sanitizing left out, for telling the user after
+ * an import or a Save. An import of their own backup keeps only the imported
+ * list, so Additional CSS beyond it does not come back.
  * @param {*} raw - { username: styles } before sanitizing
  * @param {Object} clean - the same after
  * @returns {number}
@@ -128,11 +161,15 @@ function countDroppedStyles(raw, clean) {
 }
 
 /**
- * The note for an import message when styles were left out, or ''.
+ * The note for a message when styles were left out, or ''.
  * @param {number} dropped - from countDroppedStyles
+ * @param {'imported'|'typed'} source - as sanitizeNickStyle: says what that source keeps
  * @returns {string} e.g. ' 2 styles were left out: …'
  */
-function droppedStylesNote(dropped) {
+function droppedStylesNote(dropped, source) {
 	if (!dropped) return '';
-	return ` ${dropped === 1 ? '1 style was' : `${dropped} styles were`} left out: an import keeps only colors, fonts, spacing, decoration and icons.`;
+	const kept = source === 'imported'
+		? `an import keeps only color, background color, font, letter spacing, text decoration, inversion and icons, with icons up to ${IMPORTED_ICON_MAX} characters and other values up to ${IMPORTED_CSS_VALUE_MAX}, and no CSS value holding ${UNSAFE_STYLE_VALUE_TEXT}`
+		: `Additional CSS cannot set position, offsets, z-index, transforms, filter, content or behavior, and a value cannot hold ${UNSAFE_STYLE_VALUE_TEXT}`;
+	return ` ${dropped === 1 ? '1 style was' : `${dropped} styles were`} left out: ${kept}.`;
 }

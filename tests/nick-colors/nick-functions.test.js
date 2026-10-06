@@ -5,6 +5,13 @@ const SITE_ORIGIN = 'https://cyberspace.online';
 const goToPath = (path) => dom.reconfigure({ url: SITE_ORIGIN + path });
 
 describe('isValidUsername', () => {
+	it('rejects names that would reach an object\'s prototype', () => {
+		expect(isValidUsername('__proto__')).toBe(false);
+		expect(isValidUsername('@constructor')).toBe(false);
+		expect(isValidUsername('toString')).toBe(false);
+		expect(isValidUsername('Constructor')).toBe(true);
+	});
+
 	it('accepts valid usernames', () => {
 		expect(isValidUsername('testuser')).toBe(true);
 		expect(isValidUsername('User123')).toBe(true);

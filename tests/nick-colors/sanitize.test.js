@@ -34,6 +34,25 @@ describe('sanitizeSiteConfig', () => {
 });
 
 describe('sanitizeNickStyle', () => {
+	it.each(['WebkitTransform', '-webkit-transform', 'z-index', 'offsetPath', 'Webkit-transform', 'Z-Index', 'insetInlineStart', 'MozBinding', 'msFilter'])(
+		'blocks %s in a typed style however it is spelled', (key) => {
+			expect(sanitizeNickStyle({ [key]: 'x' }, 'typed')).toBeNull();
+		});
+
+	it('refuses a value with a line break, which Additional CSS would split into a second property', () => {
+		expect(sanitizeNickStyle({ color: 'red', letterSpacing: '1px\nmargin-left: -9999px' }, 'imported')).toEqual({ color: 'red' });
+	});
+
+	it('keeps a tab, which is only whitespace in CSS', () => {
+		expect(sanitizeNickStyle({ border: '1px\tsolid red' }, 'typed')).toEqual({ border: '1px\tsolid red' });
+	});
+
+	it('keeps a long typed value and icon, which an import caps', () => {
+		const long = { appendIcon: 'i'.repeat(80), textShadow: '1px 1px red, '.repeat(30) + '0 0 red' };
+		expect(sanitizeNickStyle(long, 'typed')).toEqual(long);
+		expect(sanitizeNickStyle(long, 'imported')).toBeNull();
+	});
+
 	it('lets an imported style set only a name\'s look', () => {
 		expect(sanitizeNickStyle({
 			color: '#ff0000', fontFamily: 'Comic Sans MS, cursive', letterSpacing: '.05rem',

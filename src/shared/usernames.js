@@ -77,13 +77,17 @@ function isSkippedUsername(element) {
 }
 
 /**
- * Whether a string can be a username: not a reserved site path, no spaces.
+ * Whether a string can be a username: not an Object.prototype key (case as
+ * given), not a reserved site path, no spaces.
  * @param {string} username - with or without its @
  * @returns {boolean}
  */
 function isValidUsername(username) {
 	if (!username) return false;
 	if (username.startsWith('@')) username = username.slice(1);
+	// Callers key plain objects by name: one Object.prototype holds, such as
+	// __proto__ or toString, would read or write through it
+	if (username.trim() in Object.prototype) return false;
 	username = username.trim().toLowerCase();
 
 	if (EXCLUDE_VALUES.includes(username)) return false;

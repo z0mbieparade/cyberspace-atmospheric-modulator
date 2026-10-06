@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [0.2.0] - 2026-10-05
 
+### Fixed
+- **Long styles typed in the Color dialog were cut on load** - icons over 50 characters and CSS values over 200 were dropped from storage. Those limits apply to imports only
+- **Additional CSS could still move a name** - `-webkit-transform`, `offset-path` and the logical insets such as `inset-inline-start` got past the block list, as did a vendor-prefixed or hyphenated key in storage. Keys are checked as the property the browser applies, and Save says what it left out
+- **Styles already saved lose any blocked property or unsafe value on load**, such as a `transform` or a `background-image: url(...)`. Storage cannot tell your own CSS from an old shared file's
+- **Importing one name's style lost its letter spacing and text decoration** - both go into Additional CSS
+- **An imported value with a line break could set any property** - it landed in Additional CSS, which Save splits by line. Values with a line break or another control character are refused
+- Usernames that are built-in object properties, such as `__proto__` or `toString`, are ignored
+
+## [0.2.0] - 2026-10-05
+
 The first release of Cyberspace Atmospheric Modulator: usability features for Cyberspace as one userscript, with the Nick Colors userscript built in.
 
 ### Added
