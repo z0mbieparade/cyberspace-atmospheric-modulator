@@ -2,6 +2,13 @@
 // USER SETTINGS PANEL
 // =====================================================
 
+/**
+ * The Color dialog for one user.
+ * Side effects: opens a dialog; Save and Reset store the user's style,
+ * recolor the page and redraw the Users section.
+ * @param {string} username
+ * @param {Object} currentStyles - their raw styles (getRawStylesForPicker)
+ */
 function createUserSettingsPanel(username, currentStyles)
 {
 	// Check if color range is restricted
@@ -24,8 +31,14 @@ function createUserSettingsPanel(username, currentStyles)
 	const initialPrependIconState = !hasPrependIconProperty ? null : (savedPrependIcon ? true : false);
 	const initialAppendIconState = !hasAppendIconProperty ? null : (savedAppendIcon ? true : false);
 
-	// Calculate hash-based defaults for display
+	// What each icon side shows with nothing saved, as getNickBase picks it: a
+	// site-wide override's icon, else the hashed one while that side's switch
+	// in the settings for every name is on
 	const hashIcon = getHashBasedIcon(username, { effectiveConfig: eff }) || '';
+	const overrideIcons = typeof MANUAL_OVERRIDES[username] === 'object' ? MANUAL_OVERRIDES[username] : {};
+	const defaultIcon = (side) => side in overrideIcons ? overrideIcons[side] || '' : (eff[side] ? hashIcon : '');
+	const defaultPrependIcon = defaultIcon('prependIcon');
+	const defaultAppendIcon = defaultIcon('appendIcon');
 	const hashStyles = getHashBasedStyleVariations(username);
 	const hashWeight = hashStyles.fontWeight;
 	const hashItalic = hashStyles.fontStyle;
@@ -153,12 +166,16 @@ function createUserSettingsPanel(username, currentStyles)
 				saveCustomNickColors();
 				colorizeAll();
 				close();
+				// After close, which returns focus to what opened the dialog
+				refreshUserList(username);
 			}},
 			{ label: 'Reset', class: 'reset', onClick: (close) => {
 				delete customNickColors[username];
 				saveCustomNickColors();
 				colorizeAll();
 				close();
+				// After close, which returns focus to what opened the dialog
+				refreshUserList(username);
 			}},
 			{ label: 'Cancel', class: 'cancel', onClick: (close) => close() }
 		]
@@ -177,14 +194,14 @@ function createUserSettingsPanel(username, currentStyles)
 	const userSettingsSchema = [
 		{ type: 'hr' },
 		{ type: 'section', label: 'Custom Icons', hint: 'Prepend/Append a custom character or emoji to the nickname.', fields: [
-			{ key: 'prependIconEnabled', type: 'tristate', label: 'Prepend icon', default: initialPrependIconState, defaultLabel: hashIcon },
+			{ key: 'prependIconEnabled', type: 'tristate', label: 'Prepend icon', default: initialPrependIconState, defaultLabel: defaultPrependIcon },
 			{ key: 'prependIconPicker', type: 'custom', showWhen: { field: 'prependIconEnabled', is: true }, render: () => {
 				const div = document.createElement('div');
 				div.innerHTML = buildIconPicker('settings-prependIcon');
 				return div;
 			}},
 			{ key: 'prependIcon', type: 'text', label: '', ariaLabel: 'Custom icon before nickname', default: savedPrependIcon, placeholder: 'custom icon before nickname', showWhen: { field: 'prependIconEnabled', is: true } },
-			{ key: 'appendIconEnabled', type: 'tristate', label: 'Append icon', default: initialAppendIconState, defaultLabel: hashIcon },
+			{ key: 'appendIconEnabled', type: 'tristate', label: 'Append icon', default: initialAppendIconState, defaultLabel: defaultAppendIcon },
 			{ key: 'appendIconPicker', type: 'custom', showWhen: { field: 'appendIconEnabled', is: true }, render: () => {
 				const div = document.createElement('div');
 				div.innerHTML = buildIconPicker('settings-appendIcon');
@@ -385,9 +402,6 @@ function createUserSettingsPanel(username, currentStyles)
 	function updatePreview() {
 		updateGradients();
 
-		// Build temporary styles object from current dialog state (using engine values)
-		const prependIconState = engine.getFieldValue('prependIconEnabled');
-		const appendIconState = engine.getFieldValue('appendIconEnabled');
 		// What Save would store, as Save checks it (sanitize.js), so the
 		// preview shows what is saved
 		const tempStyles = sanitizeNickStyle(buildCurrentStyles(), 'typed') ?? {};
@@ -405,20 +419,6 @@ function createUserSettingsPanel(username, currentStyles)
 		siteConfig.useSiteThemeSat = false;
 		siteConfig.useSiteThemeLit = false;
 
-		// Determine icons for preview
-		let prependValue = '';
-		let appendValue = '';
-		if (prependIconState === true) {
-			prependValue = (engine.getFieldValue('prependIcon') || '').trim();
-		} else if (prependIconState === null && siteConfig.prependIcon) {
-			prependValue = hashIcon;
-		}
-		if (appendIconState === true) {
-			appendValue = (engine.getFieldValue('appendIcon') || '').trim();
-		} else if (appendIconState === null && siteConfig.appendIcon) {
-			appendValue = hashIcon;
-		}
-
 		// Helper to apply styles to a preview element
 		const applyPreviewStyles = (el, isMention, isInverted = false) => {
 			el.style.cssText = '';
@@ -426,10 +426,6 @@ function createUserSettingsPanel(username, currentStyles)
 				matchType: isMention ? 'mention' : 'nick',
 				isInverted,
 				debugData: DEBUG,
-				mergeStyles: {
-					prependIcon: prependValue,
-					appendIcon: appendValue
-				}
 			});
 		};
 

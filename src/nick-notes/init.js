@@ -7,6 +7,7 @@ registerFeature({
 
 	onStorageReady() {
 		initNickNotes();
+		refreshUserList();
 	},
 
 	exportBackup: () => ({ ...nickNotes }),
@@ -15,11 +16,13 @@ registerFeature({
 		// Only text: a note is shown as text, and nothing else belongs here
 		nickNotes = Object.fromEntries(Object.entries(data).filter(([, notes]) => typeof notes === 'string' && notes));
 		saveNickNotes();
+		refreshUserList();
 		return { success: true, message: 'Notes imported.' };
 	},
 	resetSettings() {
 		nickNotes = {};
 		saveNickNotes();
+		refreshUserList();
 	},
 	debugLog: nickNotesSummary,
 	reportSummary: nickNotesSummary,
@@ -27,6 +30,13 @@ registerFeature({
 	boot() {
 		// Switched off: gone from the menu now, not after a reload
 		registerUserMenuItem({ label: 'Notes', order: 20, showFor: () => featureConfig.nickNotes, onSelect: createNotesDialog });
+		// Each note in the Users section on the settings tab
+		registerUserListSource({
+			order: 20,
+			isShown: () => featureConfig.nickNotes,
+			usernames: () => Object.keys(nickNotes),
+			parts: notesListParts,
+		});
 		// Notes attach to the names the finder marks, with or without nick colors
 		watchUsernames();
 

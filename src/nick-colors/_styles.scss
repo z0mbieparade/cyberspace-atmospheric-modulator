@@ -170,40 +170,20 @@ body[data-theme="poetry"]
 		border-radius: var(--radius-md);
 	}
 }
-// The friends list in the Nick Colors settings: the names wrap, each in a
-// small box with its × at the right
-.atmo-friend-list {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--spacing-xs);
-	list-style: none;
-	margin: 0;
-	padding: 0;
-
-	li {
-		display: inline-flex;
-		align-items: center;
-		gap: var(--spacing-xs);
-		padding-inline: var(--spacing-xs);
-		border: 1px solid var(--atmo-border);
-		border-radius: var(--radius-md);
-	}
+// In the Users section: the button that opens the Color dialog. The name
+// inside it (.atmo-color-preview) carries the user's style
+.atmo-color-name {
+	@include ui.bare-button;
 }
 
-.atmo-friend-remove {
-	background: none;
-	border: none;
-	padding: 0 var(--spacing-xs);
-	color: inherit;
-	font: inherit;
-	line-height: 1;
-	cursor: pointer;
+// The star before a name: bright for a choom, dim for anyone else. The glyph
+// changes too (★ / ☆), so it does not rest on color alone
+.atmo-choom-toggle {
+	@include ui.bare-button;
+	// The dim text color, made readable on every theme (theme-colors.js)
+	--atmo-bare-color: var(--atmo-fg-muted);
 
-	&:hover {
-		color: var(--atmo-error);
-	}
-
-	&:focus-visible {
-		@include ui.focus-ring;
+	&[aria-pressed="true"] {
+		--atmo-bare-color: var(--atmo-fg);
 	}
 }

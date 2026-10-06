@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2026-10-06
+
+### Added
+- **Settings sections fold** - each section of Settings > AtmoMod folds under its title and stays the way you left it; the buttons that lead to one open it
+- **Chooms section** - everyone you have customized, by name: the name drawn in its color opens the Color dialog, a star (bright ★ for a choom, dim ☆ otherwise) adds or removes them, the note or its pencil opens the Notes dialog, and a trash button deletes it. **Reset Custom User Styles** sits below the list instead of in the Nick Colors section
+
+### Changed
+- **Only color my friends is Only color my chooms** - the Chooms section's star adds or removes them, in place of the list with an × on each. Your list carries over
+
+### Fixed
+- **Prepend icon also appended one** - each icon switch adds only its own side. A name's own icon, or its icon turned off, stays as saved instead of being replaced by the hashed one. The Color dialog shows a default icon only on the side that gets one, and a site-wide override's icon over the hashed one
+- **The AtmoMod button was missing on phones** - it sits beside the globe in the bottom bar, as a waveform icon
+- The AtmoMod tab's heading no longer shows a focus outline when the AtmoMod button opens it
+- **Notes from the menu opened empty for a name in other capitals** - Notes edits the note saved for that user whatever the case, instead of starting a second one that never showed
+- **A choom could take a mention's spelling** - a choom's name is spelled as the site writes it, not as someone typed it after an @, so their custom color matches their name on the page
+
 ## [0.2.2] - 2026-10-06
 
 ### Added

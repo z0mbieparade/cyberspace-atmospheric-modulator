@@ -1,3 +1,5 @@
+@use 'ui';
+
 // Notes tooltip, under a name with notes
 .nn-tooltip {
 	position: fixed;
@@ -25,4 +27,16 @@
 
 .nn-has-notes {
 	cursor: help;
+}
+
+// In the Users section: the note, as text that wraps. A click opens the
+// Notes dialog; the pencil beside it is the keyboard's way in
+.atmo-note-text {
+	cursor: pointer;
+}
+
+// No note yet: a quiet button, readable on every theme
+.atmo-note-add {
+	@include ui.bare-button;
+	--atmo-bare-color: var(--atmo-fg-muted);
 }

@@ -135,6 +135,7 @@ describe('the Nick Colors section, on the settings tab', () => {
 		doc.body.innerHTML = '<main><div><nav><a href="/settings/account">Account</a></nav><div class="mb-6">site settings</div></div></main>';
 	};
 	const nickSection = () => doc.querySelector('[data-atmo-settings-section="atmospheric-modulator-nick-colors"]');
+	const usersSection = () => doc.querySelector('[data-atmo-settings-section="atmospheric-modulator-users"]');
 
 	afterEach(() => {
 		dom.reconfigure({ url: 'https://cyberspace.online/' });
@@ -165,7 +166,9 @@ describe('the Nick Colors section, on the settings tab', () => {
 		expect(JSON.parse(localStorage.getItem('atmosphericModulator_siteConfig')).contrastThreshold).toBeGreaterThan(0);
 	});
 
-	it('resets every per-user style, in red, after asking, and keeps notes', async () => {
+	it('resets every per-user style from below the Chooms list, in red, after asking, and keeps notes', async () => {
+		// The core registers the Chooms section at boot; init.js is left out of the setup
+		registerUserListSection();
 		goToSettingsTab();
 		startFeatures();
 		await new Promise(resolve => setTimeout(resolve, 20));
@@ -174,9 +177,10 @@ describe('the Nick Colors section, on the settings tab', () => {
 		FEATURES.find(f => f.key === 'nickNotes').importBackup({ alice: 'a note' }, true);
 		await new Promise(resolve => setTimeout(resolve, 20));
 
-		const clear = nickSection().querySelector('button[id*="nick-colors-clear-custom"]');
-		expect(clear.closest('.atmo-danger')).not.toBeNull();
-		clear.click();
+		const clear = () => usersSection().querySelector('button[id*="nick-colors-clear-custom"]');
+		expect(clear().closest('.atmo-danger')).not.toBeNull();
+		expect(clear().closest('.atmo-user-list')).toBeNull();
+		clear().click();
 		doc.querySelector('.atmo-dialog-footer button.cancel').click();
 		expect(localStorage.getItem('atmosphericModulator_customNickColors')).toContain('alice');
 
@@ -191,8 +195,11 @@ describe('the Nick Colors section, on the settings tab', () => {
 		const custom = name.style.color;
 		expect(custom).toMatch(/^rgb\(255, /);
 
-		clear.click();
+		clear().focus();
+		clear().click();
 		doc.querySelector('.atmo-dialog-footer button.atmo-danger').click();
+		// The list redraws without her color; focus stays on the button
+		expect(doc.activeElement).toBe(clear());
 		expect(JSON.parse(localStorage.getItem('atmosphericModulator_customNickColors'))).toEqual({});
 		// Restyled at once, back to its own color
 		expect(name.style.color).not.toBe(custom);

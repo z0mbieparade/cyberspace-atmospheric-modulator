@@ -21,21 +21,77 @@
 	pointer-events: none;
 }
 
-// The sidebar link to the settings tab: open, its label, at the left;
-// collapsed, its icon alone, centered. Its dashed border is set inline (sidebar-link.js)
+// The Users section (user-list.js): the same columns in every row, so stars,
+// names, notes and their buttons line up. A row without a part leaves its
+// cell empty. Long names wrap within theirs
+.atmo-user-list > li {
+	display: grid;
+	grid-template-columns: auto minmax(0, 10rem) minmax(0, 1fr) auto auto;
+	align-items: baseline;
+	// The space between columns is on the parts instead. A column gap would
+	// leave a gutter beside a column no row fills, such as the stars' when
+	// nick colors is off
+	column-gap: 0;
+
+	// Each part at its cell's start: a grid stretches a button across its
+	// cell, and centers its label, so "add note" would float mid-column
+	> * {
+		justify-self: start;
+	}
+}
+
+.atmo-user-col-name {
+	grid-column: 2;
+	margin-right: var(--spacing-sm);
+	overflow-wrap: anywhere;
+	text-align: left;
+}
+
+.atmo-user-col-mark {
+	grid-column: 1;
+	margin-right: var(--spacing-sm);
+}
+
+.atmo-user-col-text {
+	grid-column: 3;
+}
+
+.atmo-user-col-edit {
+	grid-column: 4;
+	margin-left: var(--spacing-xs);
+}
+
+.atmo-user-col-delete {
+	grid-column: 5;
+	margin-left: var(--spacing-xs);
+}
+
+// The buttons below the list, set apart from its last row
+.atmo-user-list-actions {
+	margin-top: var(--spacing-sm);
+}
+
+// The link to the settings tab, in the sidebar and in the mobile bottom bar:
+// in the site's colors. Its dashed border is set inline (sidebar-link.js)
+.atmo-sidebar-link,
+.atmo-mobile-nav-link {
+	color: inherit;
+
+	&:focus-visible {
+		outline: 2px solid currentColor;
+		outline-offset: 2px;
+	}
+}
+
+// In the sidebar: open, its label, at the left; collapsed, its icon alone,
+// centered. In the bottom bar the site's classes size and space it
 .atmo-sidebar-link {
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
 	gap: 0.5rem;
 	padding-inline: 0.5rem;
-	color: inherit;
 	font: inherit;
-
-	&:focus-visible {
-		outline: 2px solid currentColor;
-		outline-offset: 2px;
-	}
 }
 
 .atmo-sidebar-link-icon {

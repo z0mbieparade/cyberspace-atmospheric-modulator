@@ -188,6 +188,7 @@ function createSettingsEngine(opts) {
 				wrapper.innerHTML = createInputRow({
 					type: 'toggle',
 					label: def.label,
+					ariaLabel,
 					id: inputId,
 					checked: !!initialValue,
 					disabled: typeof def.disabled === 'function' ? def.disabled(values) : def.disabled

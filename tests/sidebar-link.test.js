@@ -1,6 +1,6 @@
 /**
- * Sidebar link tests (src/sidebar-link.js): under About Cyberspace in the
- * site's sidebar, named for speech and screen readers, back after the site
+ * Sidebar link tests (src/sidebar-link.js): after About Cyberspace in the
+ * site's sidebar and its mobile bottom bar, named for speech and screen readers, back after the site
  * re-renders the sidebar, and opening the settings tab.
  */
 
@@ -43,7 +43,7 @@ describe('the sidebar link', () => {
 
 		expect(link().title).toBe(SETTINGS_TAB_TITLE);
 		// The version shows with the label, while the sidebar is open
-		expect(link().querySelector('.atmo-sidebar-link-label').textContent).toBe(`${SETTINGS_TAB_LABEL} v0.2.2`);
+		expect(link().querySelector('.atmo-sidebar-link-label').textContent).toBe(`${SETTINGS_TAB_LABEL} v0.2.3`);
 		// Both texts a speech user may see, open and collapsed, are in the name
 		expect(link().getAttribute('aria-label')).toContain(link().querySelector('.atmo-sidebar-link-label').textContent);
 		expect(link().getAttribute('aria-label')).toContain(link().title);
@@ -54,6 +54,24 @@ describe('the sidebar link', () => {
 		// Inline and important, so no theme's !important rule can strip it
 		expect(link().style.getPropertyPriority('border-left-style')).toBe('important');
 		expect(link().style.getPropertyValue('border-left-style')).toBe('dashed');
+	});
+
+	it('sits after About Cyberspace in the mobile bottom bar too, as an icon', () => {
+		// The site's mobile bar, as in its saved page
+		const bar = doc.createElement('aside');
+		bar.className = 'mobile-bottom-nav';
+		bar.innerHTML = `<div class="toggle-row">
+			<button class="logo-btn" title="About Cyberspace"><span class="iconify i-pixel:globe"></span></button>
+			<button class="cmd-btn-collapsed" title="Command Palette (⌘K)"></button>
+		</div>`;
+		doc.body.appendChild(bar);
+		syncSidebarLink();
+		syncSidebarLink();
+		const mobile = bar.querySelectorAll('[data-atmo-sidebar-link]');
+		expect(mobile.length).toBe(1);
+		expect(mobile[0].previousElementSibling.title).toBe('About Cyberspace');
+		expect(mobile[0].querySelector('.atmo-sidebar-link-label')).toBeNull();
+		expect(mobile[0].getAttribute('aria-label')).toContain(SETTINGS_TAB_TITLE);
 	});
 
 	it('comes back when the site re-renders the sidebar header', async () => {

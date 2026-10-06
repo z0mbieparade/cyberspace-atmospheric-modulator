@@ -9,6 +9,7 @@
 // Colors come from custom properties initThemeVariables() (theme-colors.js)
 // sets on :root:
 //   --atmo-bg, -fg, -fg-dim, -border, -code-bg, -inverted-bg, -inverted-fg
+//   --atmo-fg-muted: fg-dim made readable (4.5:1) on bg
 //   --atmo-error, -warn, -success, -info and their -bg variants (alerts)
 
 $p: 'atmo';
@@ -18,6 +19,115 @@ $p: 'atmo';
 @mixin focus-ring {
 	outline: 2px solid var(--#{$p}-fg);
 	outline-offset: 2px;
+}
+
+// A settings section's heading takes focus from script only
+// (focusSettingsSection), so a screen reader announces where the user
+// landed. It is not a control, so it gets no focus ring
+[data-#{$p}-settings-section] > h3[tabindex="-1"]:focus {
+	outline: none;
+}
+
+// A list of entries on the settings tab (notes, colors): one row each, its
+// name, what is saved, and its buttons at the right
+.#{$p}-entry-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+
+	> li {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: var(--spacing-xs) var(--spacing-sm);
+		padding-block: var(--spacing-xs);
+		border-bottom: 1px dashed var(--#{$p}-border);
+	}
+}
+
+// The saved text in a row: takes the room left, and keeps its line breaks
+.#{$p}-entry-text {
+	flex: 1 1 12rem;
+	// A flex item stops shrinking at its content's width: without this, a
+	// long note runs past a narrow screen
+	min-width: 0;
+	margin: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+// A button with none of a button's look: text or an icon in a row, still
+// focusable with a visible ring
+// Its color: --atmo-bare-color, else the text around it.
+// @param $padding-inline - space at its sides, as an icon's
+@mixin bare-button($padding-inline: 0) {
+	padding: 0 $padding-inline;
+	border: none;
+	background: none;
+	color: var(--#{$p}-bare-color, currentColor);
+	font: inherit;
+	cursor: pointer;
+
+	// The site inverts a hovered, focused or pressed button: its text color
+	// fills the background, and the text takes the background color. Its
+	// rules' weight is unknown, so these are important. A button keeps focus
+	// after a click, so without them it would hide what it shows until focus
+	// moved, as the choom star did
+	&:hover,
+	&:focus,
+	&:active {
+		background: none !important;
+		color: var(--#{$p}-bare-color, currentColor) !important;
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+
+	// The panel and dialog give every button padding and a flex size, from
+	// rules that outweigh one class
+	.#{$p}-panel &,
+	.#{$p}-dialog & {
+		flex: none;
+		padding: 0 $padding-inline;
+	}
+}
+
+// A button that is only an icon, as the pencil and trash on a row: named by
+// its label. With the danger class, as the trash, it turns the error color
+// on hover, so an edit never looks like a delete
+.#{$p}-icon-btn {
+	@include bare-button(var(--spacing-xs));
+	display: inline-flex;
+	align-items: center;
+
+	&.#{$p}-danger:hover {
+		--#{$p}-bare-color: var(--#{$p}-error);
+	}
+}
+
+// A settings section's fold: its title is a button inside the site's heading,
+// looking like the heading, with a marker for which way it is folded
+.#{$p}-settings-fold {
+	@include bare-button;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+	letter-spacing: inherit;
+	text-transform: inherit;
+}
+
+.#{$p}-settings-fold-marker::before {
+	content: "▸";
+}
+
+[aria-expanded="true"] > .#{$p}-settings-fold-marker::before {
+	content: "▾";
+}
+
+// Folded: the heading's gap would sit under nothing
+h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
+	margin-bottom: 0;
 }
 
 .#{$p}-dialog-overlay {

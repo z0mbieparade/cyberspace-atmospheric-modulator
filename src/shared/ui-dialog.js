@@ -56,7 +56,7 @@ function escapeHtml(value) {
  * label, hint and options are HTML, written by the script. value,
  * placeholder and defaultLabel are escaped, so they may hold user data.
  * @param {Object} opts
- * @param {string} opts.label - HTML
+ * @param {string} [opts.label=''] - HTML; with none, opts.ariaLabel names the field
  * @param {string} opts.id - the input's id; its label points at it
  * @param {string} [opts.type='text'] - text, textarea, select, toggle, tristate or button
  * @param {string} [opts.value=''] - for text and textarea
@@ -70,13 +70,14 @@ function escapeHtml(value) {
  * @param {string} [opts.defaultLabel=''] - for tristate: what auto resolves to
  * @param {string} [opts.buttonText=''] - for button
  * @param {boolean} [opts.stacked=false] - label above the input
- * @param {string} [opts.ariaLabel] - plain-text name for a stacked input with
- *   no visible label: a placeholder alone is not a label (WCAG 1.3.1, 4.1.2)
+ * @param {string} [opts.ariaLabel] - plain-text name for a stacked input or a
+ *   toggle with no visible label: a placeholder or a heading above is not a
+ *   label (WCAG 1.3.1, 4.1.2)
  * @returns {string} HTML, or '' for an unknown type
  */
 function createInputRow(opts) {
 	const {
-		label, id, type = 'text', value = '', placeholder = '', hint = '', classes = '',
+		label = '', id, type = 'text', value = '', placeholder = '', hint = '', classes = '',
 		options, checked = false, disabled = false, state = null, defaultLabel = '', buttonText = '',
 		stacked = false, ariaLabel = ''
 	} = opts;
@@ -115,7 +116,7 @@ function createInputRow(opts) {
 		return `
 			<div class="${rowClass}${extra}">
 				<label for="${id}">${label}${isTristate && defaultLabel ? ` <span class="${uiClass('text-dim')}">(default: ${escapeHtml(defaultLabel)})</span>` : ''}</label>
-				<input type="checkbox" id="${id}" class="${uiClass('sr-only')}"${isTristate ? '' : ' role="switch"'} ${isChecked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+				<input type="checkbox" id="${id}" class="${uiClass('sr-only')}"${nameAttr}${isTristate ? '' : ' role="switch"'} ${isChecked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
 				<label for="${id}" class="${uiClass('toggle-label')}" aria-hidden="true">
 					<span class="${uiClass('toggle-value')}">${stateText}</span>
 					<span class="${uiClass('toggle-track')}${isChecked ? ' active' : ''}">
@@ -213,6 +214,66 @@ function userscriptWarning(howToReport) {
  */
 function warningBoxHtml(html) {
 	return `<div class="${uiClass('dialog-warning')} hint">${html}</div>`;
+}
+
+/**
+ * An entry list (as the Users section): one row per entry, with its parts;
+ * or, with no entries, a hint saying so.
+ * @param {{key: string, parts: Node[]}[]} entries - key: the row's
+ *   data-entry-key; parts: what the row shows. A control in it may carry
+ *   data-entry-control, naming it for redrawEntryList
+ * @param {string} emptyText - the hint when there are none
+ * @returns {HTMLElement} a .atmo-entry-list, or the hint
+ */
+function entryList(entries, emptyText) {
+	if (!entries.length) {
+		const empty = document.createElement('div');
+		empty.className = 'hint';
+		empty.textContent = emptyText;
+		return empty;
+	}
+	const list = document.createElement('ul');
+	list.className = uiClass('entry-list');
+	for (const entry of entries) {
+		const item = document.createElement('li');
+		item.dataset.entryKey = entry.key;
+		item.append(...entry.parts);
+		list.appendChild(item);
+	}
+	return list;
+}
+
+/**
+ * Redraw the entry lists in container. When focus was in them, or nowhere
+ * (on <body>, where a browser may leave it after a click), put it back: on
+ * the same control (data-entry-control) of focusKey's row, else its first button, else the first
+ * button of the row now in its place, else fallback. The redraw drops the
+ * button that had it. Without focusKey, the row that had focus is used, and
+ * focus nowhere stays nowhere. Focus elsewhere, as after a dialog opened
+ * from the page, stays where it is.
+ * Side effects: runs redraw; may move focus.
+ * @param {HTMLElement} container - holds the lists
+ * @param {Function} redraw - replaces container's contents
+ * @param {string} [focusKey] - the row the change was about; none, to keep
+ *   focus on whichever row has it
+ * @param {HTMLElement|null} [fallback] - focused when no row is left
+ */
+function redrawEntryList(container, redraw, focusKey, fallback = null) {
+	const previousKeys = Array.from(container.querySelectorAll('li[data-entry-key]'), li => li.dataset.entryKey);
+	const active = document.activeElement;
+	const focusInList = !!active && active !== document.body && container.contains(active);
+	const focusNowhere = !active || active === document.body;
+	// Without a key, the row and button that have focus, so a redraw for some
+	// other reason (a load finishing) does not drop it
+	const key = focusKey ?? (focusInList ? active.closest('li[data-entry-key]')?.dataset.entryKey : undefined);
+	const control = focusInList ? active.dataset.entryControl || null : null;
+	redraw();
+	if (key === undefined || !(focusInList || focusNowhere)) return;
+	const rows = Array.from(container.querySelectorAll('li[data-entry-key]'));
+	const row = rows.find(li => li.dataset.entryKey === key)
+		|| rows[Math.min(previousKeys.indexOf(key), rows.length - 1)];
+	const sameControl = control && row?.querySelector(`[data-entry-control="${control}"]`);
+	(sameControl || row?.querySelector('button') || fallback)?.focus();
 }
 
 /**

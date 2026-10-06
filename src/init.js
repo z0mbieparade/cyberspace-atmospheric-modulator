@@ -31,7 +31,9 @@ if (isHostMatch(HOST_EXCLUDE) || isPathMatch(PATH_EXCLUDE)) {
 		initUserMenu();
 		initSidebarLink();
 		configureSettingsTab({ label: SETTINGS_TAB_LABEL, title: SETTINGS_TAB_TITLE, hash: SETTINGS_TAB_HASH, warning: REPORT_WARNING, attribution: attributionItems() });
-		registerSettingsSection({ key: SETTINGS_SECTION_KEY, title: SETTINGS_TITLE, description: SETTINGS_SECTION_DESCRIPTION, icon: logoIconHtml('atmo-section-icon'), render: renderSettingsSection });
+		registerSettingsSection({ key: SETTINGS_SECTION_KEY, title: SETTINGS_TITLE, description: SETTINGS_SECTION_DESCRIPTION, icon: logoIconHtml('atmo-section-icon'), startsOpen: true, render: renderSettingsSection });
+		// Every customized user, filled by the features that have any
+		registerUserListSection();
 		// Last on the tab, after this script's other sections: it covers them all
 		registerSettingsSection({ key: BACKUP_SECTION_KEY, title: BACKUP_SECTION_TITLE, order: 1, render: renderBackupSection });
 		startFeatures();

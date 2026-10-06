@@ -148,13 +148,16 @@ function getNickBase(username, colorFormat = 'hsl', options = {})
 		if (options.effectiveConfig.varyCase && !styles.fontVariant)
 			styles.fontVariant = hashStyles.fontVariant;
 
+		// Each side only while its own switch is on, and only where neither the
+		// user nor a site-wide override set one: a custom icon, or '' for none,
+		// stays as set
 		if(options.effectiveConfig.prependIcon || options.effectiveConfig.appendIcon)
 		{
 			const icon = getHashBasedIcon(username, { effectiveConfig: options.effectiveConfig });
-			if(styles.appendIcon !== false)
-				styles.appendIcon = icon;
-			if(styles.prependIcon !== false)
+			if(options.effectiveConfig.prependIcon && styles.prependIcon === undefined)
 				styles.prependIcon = icon;
+			if(options.effectiveConfig.appendIcon && styles.appendIcon === undefined)
+				styles.appendIcon = icon;
 		}
 	}
 

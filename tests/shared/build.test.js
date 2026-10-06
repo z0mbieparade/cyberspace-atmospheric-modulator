@@ -163,6 +163,7 @@ describe('styles/_ui.scss', () => {
 		expect(css).toContain('.atmo-slider-input:focus-visible + .atmo-slider-thumb');
 		expect(css).toContain('.atmo-dialog .atmo-dialog-warning');
 		expect(css).toContain('var(--atmo-warn-bg)');
+		expect(css).toContain('[data-atmo-settings-section] > h3[tabindex="-1"]:focus');
 		// Must outrank the dialog's full-width `.atmo-dialog input[type=number]`
 		expect(css).toContain('.atmo-dialog .atmo-slider-labels .atmo-slider-value-input');
 	});

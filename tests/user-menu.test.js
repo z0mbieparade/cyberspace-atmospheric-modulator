@@ -220,6 +220,27 @@ describe('nick notes', () => {
 		expect(tooltip()).toBeNull();
 	});
 
+	it('shows a note saved under other capitals', () => {
+		feature('nickNotes').importBackup({ zed: 'met at the meetup' }, true);
+		vi.useFakeTimers();
+		const name = addName('Zed');
+		name.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true }));
+		vi.advanceTimersByTime(300);
+		expect(doc.querySelector('.nn-tooltip.visible').textContent).toBe('met at the meetup');
+		name.dispatchEvent(new dom.window.MouseEvent('mouseout', { bubbles: true }));
+	});
+
+	it('edits a note saved under other capitals from the menu, instead of starting a second one', () => {
+		feature('nickNotes').importBackup({ Zed: 'met at the meetup' }, true);
+		rightClick(addName('zed'));
+		menuItems().find(item => item.textContent === 'Notes').click();
+		const textarea = doc.querySelector('.atmo-dialog textarea');
+		expect(textarea.value).toBe('met at the meetup');
+		textarea.value = 'second meetup';
+		doc.querySelector('.atmo-dialog-footer button.save').click();
+		expect(stored('nickNotes')).toEqual({ Zed: 'second meetup' });
+	});
+
 	it('does not show for a name the site removed while it waited, and hides on a click', () => {
 		feature('nickNotes').importBackup({ alice: 'met at the meetup' }, true);
 		vi.useFakeTimers();

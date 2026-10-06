@@ -258,3 +258,18 @@ describe('getThemeDefaultSettings for a theme stored under another id', () => {
 		expect(presetOptionValue('nonesuch')).toBe('');
 	});
 });
+
+describe('getThemeColors fgMuted', () => {
+	it('is the theme\'s dim text made readable on its background', () => {
+		const root = document.documentElement;
+		root.style.setProperty('--color-bg', '#777777');
+		root.style.setProperty('--color-fg-dim', '#999999');
+		try {
+			const colors = getThemeColors();
+			expect(getContrastRatio(colors.bg, colors.fgMuted)).toBeGreaterThanOrEqual(4.5);
+		} finally {
+			root.style.removeProperty('--color-bg');
+			root.style.removeProperty('--color-fg-dim');
+		}
+	});
+});

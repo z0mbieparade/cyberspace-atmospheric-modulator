@@ -25,6 +25,11 @@ function loadScript(name = 'script') {
 	return window.eval(`(function () {
 		// update-check.js's, which the bundle has; marks which script bound it
 		function bindVersionLink(el) { el.dataset.boundBy = '${name}'; }
+		// gm-storage.js's, which the bundle has: one store per page, as GM storage is per script
+		const _GM_getValue = (key, fallback) => (window.__gmStore || {})[key] ?? fallback;
+		const _GM_setValue = (key, value) => { (window.__gmStore = window.__gmStore || {})[key] = value; };
+		const isGMStorageReady = () => window.__gmReady !== false;
+		const whenGMStorageReady = (callback) => { (window.__gmReadyCallbacks = window.__gmReadyCallbacks || []).push(callback); };
 		${SOURCE}
 		return { registerSettingsSection, refreshSettingsSection, configureSettingsTab, openSettingsSection, settingsTabUrl, syncSettingsPage };
 	})()`);
@@ -106,7 +111,7 @@ describe('the Userscripts tab', () => {
 		expect(first.querySelector('.atmo-dialog-warning a').getAttribute('href')).toBe('/z0ylent');
 		expect(Array.from(first.querySelectorAll('.atmo-dialog-attribution > span'), s => s.textContent)).toEqual(['created by me', 'v1']);
 		expect(first.querySelector('.atmo-version-link').dataset.boundBy, 'the version button works as in a dialog').toBe('script');
-		expect(Array.from(panel().querySelectorAll('section > h3'), h => h.textContent)).toEqual(['A', 'B']);
+		expect(Array.from(panel().querySelectorAll('section h3'), h => h.textContent)).toEqual(['A', 'B']);
 	});
 
 	it('binds the notice\'s version button by the script that configured the tab, whichever script redraws it', async () => {
@@ -180,7 +185,7 @@ describe('the Userscripts tab', () => {
 
 		expect(desktopBar().querySelectorAll('a[data-atmo-settings-tab]').length).toBe(1);
 		expect(document.querySelectorAll('#atmo-settings-panel').length).toBe(1);
-		const titles = Array.from(panel().querySelectorAll('section > h3'), h => h.textContent);
+		const titles = Array.from(panel().querySelectorAll('section h3'), h => h.textContent);
 		expect(titles).toEqual(['Atmospheric Modulator', 'Nick Colors']);
 	});
 
@@ -191,7 +196,7 @@ describe('the Userscripts tab', () => {
 		one.registerSettingsSection({ key: 'b-main', title: 'Main', render: () => {} });
 		await settle();
 
-		const titles = Array.from(panel().querySelectorAll('section > h3'), h => h.textContent);
+		const titles = Array.from(panel().querySelectorAll('section h3'), h => h.textContent);
 		expect(titles).toEqual(['Main', 'Other', 'Backup']);
 	});
 
@@ -199,7 +204,7 @@ describe('the Userscripts tab', () => {
 		let shown = false;
 		const script = loadScript();
 		script.registerSettingsSection({ key: 'a', title: 'A', isShown: () => shown, render: () => {} });
-		const titles = () => Array.from(panel().querySelectorAll('section > h3'), h => h.textContent);
+		const titles = () => Array.from(panel().querySelectorAll('section h3'), h => h.textContent);
 		expect(titles()).toEqual([]);
 		shown = true;
 		script.syncSettingsPage();
@@ -213,27 +218,109 @@ describe('the Userscripts tab', () => {
 		let body = null;
 		loadScript().registerSettingsSection({ key: 'a', title: 'A', render: (el) => { body = el; } });
 		expect(body.className).toBe('atmo-panel');
-		expect(body.parentElement.className).toBe('terminal-box p-4 mb-3');
-		expect(body.previousElementSibling.className).toBe('text-xs mb-3 uppercase tracking-wider');
+		const section = body.closest('section');
+		expect(section.className).toBe('terminal-box p-4 mb-3');
+		// The site's heading, holding the fold's button
+		expect(section.querySelector(':scope > h3').className).toBe('text-xs mb-3 uppercase tracking-wider');
+		expect(section.querySelector(':scope > h3 > button').getAttribute('aria-controls')).toBe(body.parentElement.id);
 	});
 
 	it('puts a section\'s icon before its title, as given, leaving the title as the heading\'s text', () => {
 		loadScript().registerSettingsSection({ key: 'a', title: 'A', icon: '<svg aria-hidden="true"></svg>', render: () => {} });
-		const heading = panel().querySelector('section > h3');
-		expect(heading.firstElementChild.tagName.toLowerCase()).toBe('svg');
+		const heading = panel().querySelector('section h3');
+		// After the fold's marker, which is hidden from screen readers
+		const button = heading.querySelector('button');
+		expect(button.children[1].tagName.toLowerCase()).toBe('svg');
+		expect(button.children[0].getAttribute('aria-hidden')).toBe('true');
 		expect(heading.textContent).toBe('A');
 	});
 
 	it('shows a section\'s description under its heading, as plain text', () => {
 		loadScript().registerSettingsSection({ key: 'a', title: 'A', description: 'What these are <b>for</b>', render: () => {} });
-		const heading = panel().querySelector('section > h3');
-		const description = heading.nextElementSibling;
+		const heading = panel().querySelector('section h3');
+		const description = heading.nextElementSibling.firstElementChild;
 		expect(description.tagName).toBe('P');
 		expect(description.className).toBe('text-fg-dim text-sm mb-3');
 		// The site's tighter heading gap when a description follows
 		expect(heading.className).toBe('text-xs mb-2 uppercase tracking-wider');
 		expect(description.textContent).toBe('What these are <b>for</b>');
 		expect(description.nextElementSibling.className).toBe('atmo-panel');
+	});
+
+	describe('folding', () => {
+		const button = (key) => panel().querySelector(`[data-atmo-settings-section="${key}"] > h3 > button`);
+		const isOpen = (key) => button(key).getAttribute('aria-expanded') === 'true'
+			&& !panel().querySelector(`[data-atmo-settings-section="${key}"] > h3 + div`).hidden;
+
+		it('treats an unreadable saved value as none, and still saves a fold', () => {
+			window.__gmStore = { settingsSectionsOpen: '"x"' };
+			const script = loadScript();
+			script.registerSettingsSection({ key: 'a', title: 'A', startsOpen: true, render: () => {} });
+			expect(isOpen('a')).toBe(true);
+			button('a').click();
+			expect(JSON.parse(window.__gmStore.settingsSectionsOpen)).toEqual({ a: false });
+		});
+
+		it('starts folded unless startsOpen, and remembers each fold across a re-render', () => {
+			const script = loadScript();
+			script.registerSettingsSection({ key: 'a', title: 'A', startsOpen: true, render: () => {} });
+			script.registerSettingsSection({ key: 'b', title: 'B', render: () => {} });
+			expect(isOpen('a')).toBe(true);
+			expect(isOpen('b')).toBe(false);
+
+			button('a').click();
+			button('b').click();
+			script.refreshSettingsSection('a');
+			script.refreshSettingsSection('b');
+			expect(isOpen('a')).toBe(false);
+			expect(isOpen('b')).toBe(true);
+		});
+
+		it('drawn before async storage loads, shows the saved folds once it has, without overwriting them', () => {
+			// The cache is still empty: every read gives the default
+			window.__gmStore = {};
+			window.__gmReady = false;
+			const script = loadScript();
+			script.registerSettingsSection({ key: 'a', title: 'A', startsOpen: true, render: () => {} });
+			script.registerSettingsSection({ key: 'b', title: 'B', render: () => {} });
+			expect(isOpen('a')).toBe(true);
+			// A click now must not write: it would replace every saved state
+			button('b').click();
+			expect(window.__gmStore.settingsSectionsOpen).toBeUndefined();
+
+			// The cache loads, with the user's saved folds
+			window.__gmStore.settingsSectionsOpen = JSON.stringify({ a: false, b: false });
+			window.__gmReady = true;
+			script.syncSettingsPage();
+			expect(isOpen('a')).toBe(false);
+			expect(isOpen('b')).toBe(false);
+			expect(JSON.parse(window.__gmStore.settingsSectionsOpen)).toEqual({ a: false, b: false });
+		});
+
+		it('keeps a section open that a link opened before storage loaded, through the sync that applies saved states', () => {
+			window.__gmStore = {};
+			window.__gmReady = false;
+			window.history.replaceState(null, '', '/settings/keyboard#userscripts');
+			const script = loadScript();
+			// Open by default before storage, as the main section is
+			script.registerSettingsSection({ key: 'a', title: 'A', startsOpen: true, render: () => {} });
+			script.openSettingsSection('a');
+			expect(isOpen('a')).toBe(true);
+
+			// Storage arrives saying folded, and a feature booting then syncs
+			// before the queued callbacks run
+			window.__gmStore.settingsSectionsOpen = JSON.stringify({ a: false });
+			window.__gmReady = true;
+			script.syncSettingsPage();
+			expect(isOpen('a')).toBe(true);
+			window.__gmReadyCallbacks.forEach(callback => callback());
+			expect(JSON.parse(window.__gmStore.settingsSectionsOpen)).toEqual({ a: true });
+
+			// The user folding it themselves wins
+			button('a').click();
+			script.refreshSettingsSection('a');
+			expect(isOpen('a')).toBe(false);
+		});
 	});
 
 	it('restores the site tab when another site tab is clicked', async () => {
@@ -342,6 +429,8 @@ describe('the Userscripts tab', () => {
 			expect(window.location.hash).toBe('#userscripts');
 			expect(panel().hidden).toBe(false);
 			expect(document.activeElement).toBe(panel().querySelector('[data-atmo-settings-section="a"] > h3'));
+			// Folded by default; opening it there unfolds it
+			expect(panel().querySelector('[data-atmo-settings-section="a"] > h3 > button').getAttribute('aria-expanded')).toBe('true');
 		});
 
 		it('elsewhere, records the section and loads the last-used settings tab', () => {

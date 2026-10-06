@@ -1,5 +1,5 @@
 /**
- * Friends tests: with "Only color my friends" on, only names on the list are
+ * Friends tests: with "Only color my chooms" on, only names on the list are
  * colored; the list survives a backup and is checked when it comes back.
  */
 
@@ -24,10 +24,30 @@ const markedName = (username) => {
 };
 
 describe('sanitizeNickFriends', () => {
-	it('keeps the toggle only when true, and unique, valid, lowercased names', () => {
+	it('keeps the toggle only when true, and valid names, unique without case, in the case given', () => {
 		expect(sanitizeNickFriends({ enabled: 'yes', users: ['Alice', 'alice', '@bob', ' @carol', '@', 'two words', 7, '__proto__'] }))
-			.toEqual({ enabled: false, users: ['alice', 'bob', 'carol'] });
+			.toEqual({ enabled: false, users: ['Alice', 'bob', 'carol'] });
 		expect(sanitizeNickFriends(null)).toEqual({ enabled: false, users: [] });
+	});
+});
+
+describe('setNickFriend', () => {
+	it('keeps the page\'s spelling, and matches without case', () => {
+		setNickFriend('Zed', true);
+		expect(exportSettings().nickFriends.users).toEqual(['Zed']);
+		expect(isNickFriend('zed')).toBe(true);
+		setNickFriend('zed', false);
+		expect(isNickFriend('Zed')).toBe(false);
+	});
+});
+
+describe('a friend saved lowercase by an earlier build', () => {
+	it('takes the page\'s spelling once the name is seen', () => {
+		replaceNickFriends({ enabled: false, users: ['zed'] });
+		const zed = markedName('Zed');
+		styleUsername(zed);
+		expect(exportSettings().nickFriends.users).toEqual(['Zed']);
+		zed.remove();
 	});
 });
 
@@ -133,49 +153,16 @@ describe('backup', () => {
 });
 
 describe('the Friends settings', () => {
-	it('switches the toggle and removes a friend from the list', () => {
+	it('switches the toggle', () => {
 		replaceNickFriends({ enabled: false, users: ['alice'] });
 		const container = doc.createElement('div');
 		doc.body.appendChild(container);
 		renderNickFriendsSettings(container);
-
 		const toggle = container.querySelector('input[type="checkbox"]');
+		expect(container.querySelector('h4').textContent).toBe('Only color my chooms');
 		toggle.click();
 		expect(shouldColorNick('bob')).toBe(false);
-
-		const remove = container.querySelector('button[aria-label="Remove @alice from friends"]');
-		remove.click();
-		expect(isNickFriend('alice')).toBe(false);
 		container.remove();
-	});
-});
-
-describe('focusAfterFriendRemoved', () => {
-	// The Nick Colors section as the settings page renders it
-	const section = (names) => {
-		const el = doc.createElement('section');
-		el.setAttribute('data-atmo-settings-section', 'atmospheric-modulator-nick-colors');
-		el.innerHTML = '<div class="atmo-friends"><input type="checkbox" data-name="switch"><ul class="atmo-friend-list">'
-			+ names.map(name => `<li><button type="button" data-name="${name}">×</button></li>`).join('') + '</ul></div>';
-		doc.body.appendChild(el);
-		return el;
-	};
-
-	it('moves focus to the × now in that place, the one before, or the switch', () => {
-		let el = section(['alice', 'carol']);
-		focusAfterFriendRemoved(1);
-		expect(doc.activeElement.dataset.name).toBe('carol');
-		el.remove();
-
-		el = section(['alice']);
-		focusAfterFriendRemoved(1);
-		expect(doc.activeElement.dataset.name).toBe('alice');
-		el.remove();
-
-		el = section([]);
-		focusAfterFriendRemoved(0);
-		expect(doc.activeElement.dataset.name).toBe('switch');
-		el.remove();
 	});
 });
 
@@ -212,39 +199,5 @@ describe('addOwnNameAsFirstFriend', () => {
 		replaceNickFriends({ enabled: true, users: [] });
 		await addOwnNameAsFirstFriend(async () => { throw new Error('Not signed in to Cyberspace.'); });
 		expect(exportSettings().nickFriends.users).toEqual([]);
-	});
-});
-
-describe('the first-friend lookup and focus', () => {
-	// The Nick Colors section as the settings page renders it, with the Friends part
-	const section = () => {
-		const el = doc.createElement('section');
-		el.setAttribute('data-atmo-settings-section', 'atmospheric-modulator-nick-colors');
-		const friends = doc.createElement('div');
-		const other = doc.createElement('button');
-		other.textContent = 'Monochrome';
-		el.append(friends, other);
-		doc.body.appendChild(el);
-		renderNickFriendsSettings(friends);
-		return { el, other };
-	};
-
-	it('keeps focus on the switch through the redraw', async () => {
-		replaceNickFriends({ enabled: true, users: [] });
-		const { el } = section();
-		el.querySelector('.atmo-friends input[type="checkbox"]').focus();
-		await addOwnNameAsFirstFriend(async () => 'zed');
-		expect(isNickFriend('zed')).toBe(true);
-		expect(doc.activeElement).toBe(el.querySelector('.atmo-friends input[type="checkbox"]'));
-		el.remove();
-	});
-
-	it('leaves focus elsewhere in the section where it is', async () => {
-		replaceNickFriends({ enabled: true, users: [] });
-		const { el, other } = section();
-		other.focus();
-		await addOwnNameAsFirstFriend(async () => 'zed');
-		expect(doc.activeElement).toBe(other);
-		el.remove();
 	});
 });

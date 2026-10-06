@@ -108,28 +108,22 @@ function createSettingsPanel() {
 function renderSiteSettingsSection(body) {
 	const { preview, content } = siteSettingsMarkup();
 	const resetId = uiId('nick-colors-reset');
-	const clearId = uiId('nick-colors-clear-custom');
 	body.innerHTML = `
 		<div class="hint">Changes save as you make them. Per-user colors: right-click a username and ${COLOR_MENU_HOWTO}.</div>
 		<div class="atmo-dialog-preview">${preview}</div>
 		${content}
-		${createInputRow({
-			type: 'button',
-			id: resetId,
-			// Undoes the section's settings: in the warning color, and asks first
-			classes: uiClass('caution'),
-			label: 'Put the color settings back to the selected preset, or with none selected to the site theme\'s. Friends, per-user colors and notes stay.',
-			buttonText: 'Reset to Preset',
-		})}
-		${createInputRow({
-			type: 'button',
-			id: clearId,
-			// Deletes styles made by hand, which no preset brings back: in the
-			// error color, and asks first
-			classes: uiClass('danger'),
-			label: 'Remove the custom color, icons and style set for each user. Notes and the settings above stay.',
-			buttonText: 'Reset Custom Nick Color Settings',
-		})}
+		<hr />
+		<div class="${uiClass('settings-section')}">
+			<h4>Reset Nick Color Theme</h4>
+			${createInputRow({
+				type: 'button',
+				id: resetId,
+				// Undoes the section's settings: in the warning color, and asks first
+				classes: uiClass('caution'),
+				label: 'Put the color settings back to the selected preset, or with none selected to the site theme\'s. Chooms, per-user colors and notes stay.',
+				buttonText: 'Reset to Preset',
+			})}
+		</div>
 	`;
 	const form = buildSiteSettingsForm(body, {
 		autoSave: true,
@@ -142,29 +136,29 @@ function renderSiteSettingsSection(body) {
 	renderNickFriendsSettings(friends);
 	resetButton.addEventListener('click', () => confirmAction({
 		title: 'Reset to preset?',
-		message: `This puts the nick color settings back to the selected preset, or with none selected to the site theme's. Friends, per-user colors, notes and the ${SETTINGS_TITLE} section stay.`,
+		message: `This puts the nick color settings back to the selected preset, or with none selected to the site theme's. Chooms, per-user colors, notes and the ${SETTINGS_TITLE} section stay.`,
 		confirmLabel: 'RESET',
 		tone: 'caution',
 		onConfirm: () => form.reset(),
 	}));
-	body.querySelector('#' + clearId).addEventListener('click', confirmClearCustomNickColors);
 }
 
 /**
  * Ask, then remove every per-user style set with Color: color, icons, style.
- * Side effects: opens a dialog; confirming clears customNickColors, saves it
- * and recolors the page.
+ * Side effects: opens a dialog; confirming clears customNickColors, saves it,
+ * recolors the page and redraws the Users section.
  */
 function confirmClearCustomNickColors() {
 	const count = Object.keys(customNickColors).length;
 	confirmAction({
-		title: 'Reset custom nick color settings?',
+		title: 'Reset custom user styles?',
 		message: `This removes the custom color, icons and style set for ${count === 1 ? '1 user' : `${count} users`}, and cannot be undone. A name with a site-wide override goes back to it. Notes stay. To keep a copy, choose Save Settings File under ${BACKUP_SECTION_TITLE} first.`,
 		confirmLabel: 'RESET CUSTOM SETTINGS',
 		tone: 'danger',
 		onConfirm: () => {
 			replaceCustomNickColors({});
 			colorizeAll();
+			refreshUserList();
 		},
 	});
 }

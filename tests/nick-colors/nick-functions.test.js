@@ -440,3 +440,21 @@ describe('DOM manipulation', () => {
 		});
 	});
 });
+
+describe('hashed icons', () => {
+	const config = (prependIcon, appendIcon) => ({ ...getEffectiveSiteConfig(), prependIcon, appendIcon, iconSet: '★' });
+	afterEach(() => { delete customNickColors.iconuser; });
+
+	it('adds an icon only on the side whose switch is on', () => {
+		const styles = getNickBase('iconuser', 'hsl', { includeStyles: true, effectiveConfig: config(true, false) });
+		expect(styles.prependIcon).toBe('★');
+		expect(styles.appendIcon).toBeUndefined();
+	});
+
+	it('keeps a custom icon, and a name\'s icon turned off, as saved', () => {
+		customNickColors.iconuser = { prependIcon: '♥', appendIcon: '' };
+		const styles = getNickBase('iconuser', 'hsl', { includeStyles: true, effectiveConfig: config(true, true) });
+		expect(styles.prependIcon).toBe('♥');
+		expect(styles.appendIcon).toBe('');
+	});
+});

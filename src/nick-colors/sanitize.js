@@ -142,7 +142,7 @@ function sanitizeNickStyles(colors, source) {
 
 /**
  * The friends list from storage or a settings file: the toggle as a
- * boolean, and unique, valid, lowercased usernames.
+ * boolean, and valid usernames, unique without case, in the case given.
  * @param {*} friends - { enabled, users }
  * @returns {{enabled: boolean, users: string[]}}
  */
@@ -151,9 +151,11 @@ function sanitizeNickFriends(friends) {
 	// Normalized before the check, so the name stored is the one checked
 	const clean = users
 		.filter(user => typeof user === 'string')
-		.map(user => user.trim().replace(/^@/, '').toLowerCase())
+		.map(user => user.trim().replace(/^@/, ''))
 		.filter(user => isValidUsername(user));
-	return { enabled: !!friends && friends.enabled === true, users: [...new Set(clean)] };
+	const seen = new Set();
+	const unique = clean.filter(user => !seen.has(user.toLowerCase()) && seen.add(user.toLowerCase()));
+	return { enabled: !!friends && friends.enabled === true, users: unique };
 }
 
 /**

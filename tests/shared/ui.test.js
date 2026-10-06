@@ -362,9 +362,14 @@ describe('createSettingsEngine', () => {
 		ui.createSettingsEngine({ container, schema: [
 			{ type: 'section', label: '<b>Notes</b>', fields: [{ key: 'notes', type: 'textarea', label: '', placeholder: 'type here' }] },
 			{ type: 'section', label: 'Icons', fields: [{ key: 'before', type: 'text', label: '', ariaLabel: 'Icon before name' }] },
+			{ type: 'section', label: 'Mode', fields: [{ key: 'on', type: 'toggle' }] },
 		] }).render();
 		expect(accessibleName(container.querySelector('[data-field-key="notes"] textarea'))).toBe('Notes');
 		expect(accessibleName(container.querySelector('[data-field-key="before"] input'))).toBe('Icon before name');
+		const toggle = container.querySelector('[data-field-key="on"] input');
+		expect(accessibleName(toggle)).toBe('Mode');
+		// No label given, and none printed
+		expect(toggle.closest('[data-field-key="on"]').textContent).not.toContain('undefined');
 	});
 
 	it('resets to schema defaults', () => {

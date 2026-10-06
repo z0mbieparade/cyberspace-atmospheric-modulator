@@ -70,6 +70,7 @@ module.exports = {
 		'header.js',
 		'features.js',
 		'user-menu.js',
+		'user-list.js',
 		'sidebar-link.js',
 		'image-undither/image-undither.js',
 		{ scope: 'nick-colors', parts: [
@@ -84,10 +85,12 @@ module.exports = {
 			'nick-colors/dialog-component.js',
 			'nick-colors/user-settings-panel.js',
 			'nick-colors/site-settings-panel.js',
+			'nick-colors/color-list.js',
 			'nick-colors/init.js',
 		] },
 		{ scope: 'nick-notes', parts: [
 			'nick-notes/notes.js',
+			'nick-notes/notes-settings.js',
 			'nick-notes/init.js',
 		] },
 		'settings-panel.js',

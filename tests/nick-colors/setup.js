@@ -24,6 +24,8 @@ const config = {
 		...scriptConfig.parts.filter(part => typeof part === 'string' && part.startsWith('shared/')),
 		'header.js',
 		'features.js',
+		// Nick colors fills its part of the Users section, and redraws it
+		'user-list.js',
 		nickColorsGroup,
 	],
 };
@@ -114,7 +116,8 @@ runAndExpose(code, [
 	'shouldColorNick',
 	'featureConfig',
 	'renderNickFriendsSettings',
-	'focusAfterFriendRemoved',
+	'nickColorListName',
+	'nickColorListParts',
 	'addOwnNameAsFirstFriend',
 	'findUsernames',
 	'usernameOf',

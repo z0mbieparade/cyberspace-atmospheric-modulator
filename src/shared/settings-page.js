@@ -24,8 +24,18 @@ const SETTINGS_SECTION_ORDER_ATTR = `data-${UI_PREFIX}-settings-section-order`;
 const SETTINGS_HIDDEN_ATTR = `data-${UI_PREFIX}-settings-hidden`;
 const SETTINGS_SAVED_CLASS_ATTR = `data-${UI_PREFIX}-settings-class`;
 
-// This script's sections: { key, title, description, order, render(container) }
+// This script's sections: { key, title, description, order, startsOpen, render(container) }
 const settingsSections = [];
+// Which of this script's sections are folded open, by key: kept in GM storage,
+// so each stays the way the user left it. Requires 'settingsSectionsOpen' in
+// GM_STORAGE_KEYS
+const SETTINGS_OPEN_KEY = 'settingsSectionsOpen';
+// On a section whose fold shows its saved state: one drawn before async
+// storage loaded gets it on the next sync
+const SETTINGS_FOLD_SYNCED_ATTR = `data-${UI_PREFIX}-settings-fold-synced`;
+// Sections a link opened on this page (focusSettingsSection): they stay open
+// when the saved states arrive from async storage, until the user folds them
+const settingsSectionsOpenedByLink = new Set();
 let settingsPageWatched = false;
 // The tab's name lives on <html>, not in this script: every script on the
 // page reads the same one, so they cannot each rewrite the tab with their own
@@ -97,9 +107,10 @@ function setAttributeIfChanged(el, name, value) {
 
 /**
  * Add a section to the Userscripts settings tab.
- * @param {{key: string, title: string, description?: string, icon?: string, order?: number, isShown?: function(): boolean, render: function(HTMLElement): void}} section -
+ * @param {{key: string, title: string, description?: string, icon?: string, order?: number, startsOpen?: boolean, isShown?: function(): boolean, render: function(HTMLElement): void}} section -
  *   key: unique per script; order: lower comes first, default 0, with ties
- *   sorted by key; description: plain text
+ *   sorted by key; startsOpen: unfolded until the user folds or unfolds it,
+ *   default false; description: plain text
  *   under the heading, in the site's own style; icon: HTML written by the
  *   script, shown before the title as given: mark it aria-hidden yourself,
  *   as the title already names the section; isShown: whether the section
@@ -111,6 +122,76 @@ function registerSettingsSection(section) {
 	settingsSections.push(section);
 	watchSettingsPage();
 	syncSettingsPage();
+}
+
+/**
+ * The saved fold states: { key: open }, or {} when none or unreadable.
+ * @returns {Object}
+ */
+function readSettingsSectionsOpen() {
+	try {
+		const open = JSON.parse(_GM_getValue(SETTINGS_OPEN_KEY, '{}'));
+		return open && typeof open === 'object' && !Array.isArray(open) ? open : {};
+	} catch (e) {
+		return {};
+	}
+}
+
+/**
+ * Whether a section is folded open: as the user last left it, or its
+ * startsOpen until then.
+ * @param {{key: string, startsOpen?: boolean}} section
+ * @returns {boolean}
+ */
+function isSettingsSectionOpen(section) {
+	const open = readSettingsSectionsOpen();
+	return typeof open[section.key] === 'boolean' ? open[section.key] : !!section.startsOpen;
+}
+
+/**
+ * Whether a section should be folded open: a link opened it on this page, or
+ * as saved (isSettingsSectionOpen).
+ * @param {{key: string, startsOpen?: boolean}} section
+ * @returns {boolean}
+ */
+function settingsSectionShouldBeOpen(section) {
+	return settingsSectionsOpenedByLink.has(section.key) || isSettingsSectionOpen(section);
+}
+
+/**
+ * The button that folds the section holding el: where focus can go when a
+ * section's contents are redrawn and nothing in them is left to take it.
+ * @param {Element} el - the section, or anything inside it
+ * @returns {HTMLButtonElement|null}
+ */
+function settingsSectionFoldButton(el) {
+	return el.closest(`[${SETTINGS_SECTION_ATTR}]`)?.querySelector(':scope > h3 > button') ?? null;
+}
+
+/**
+ * Fold a section open or shut.
+ * Side effects: sets its button's aria-expanded and its contents' hidden.
+ * @param {HTMLElement} section - the section element
+ * @param {boolean} isOpen
+ */
+function setSettingsSectionOpen(section, isOpen) {
+	settingsSectionFoldButton(section).setAttribute('aria-expanded', String(isOpen));
+	section.querySelector(':scope > h3 + div').hidden = !isOpen;
+}
+
+/**
+ * Remember whether a section is folded open. Before async storage loads,
+ * nothing: a write then would replace every saved state with this one.
+ * Side effects: writes SETTINGS_OPEN_KEY to GM storage.
+ * @param {string} key
+ * @param {boolean} isOpen
+ */
+function saveSettingsSectionOpen(key, isOpen) {
+	if (!isGMStorageReady()) return;
+	const open = readSettingsSectionsOpen();
+	if (open[key] === isOpen) return;
+	open[key] = isOpen;
+	_GM_setValue(SETTINGS_OPEN_KEY, JSON.stringify(open));
 }
 
 /**
@@ -196,9 +277,10 @@ function readPendingFocus() {
 }
 
 /**
- * Scroll a section into view and move focus to its heading.
- * Side effects: makes the heading focusable from script (tabIndex -1),
- * scrolls, and moves focus.
+ * Unfold a section, scroll it into view and move focus to its heading.
+ * Side effects: opens the section's fold, keeps it open on this page when
+ * saved states load, and saves it open once storage is ready, as a click
+ * would; makes the heading focusable from script (tabIndex -1), scrolls, and moves focus.
  * @param {string} key
  * @returns {boolean} whether the section is shown and was focused
  */
@@ -206,6 +288,11 @@ function focusSettingsSection(key) {
 	const heading = document.querySelector(`[${SETTINGS_SECTION_ATTR}="${key}"] > h3`);
 	// A heading in the closed panel cannot take focus
 	if (!heading || heading.closest('[hidden]')) return false;
+	const section = heading.parentElement;
+	settingsSectionsOpenedByLink.add(key);
+	setSettingsSectionOpen(section, true);
+	// Before async storage loads, the write waits for it
+	whenGMStorageReady(() => saveSettingsSectionOpen(key, true));
 	// Focusable from script only, so screen readers announce where they landed
 	heading.tabIndex = -1;
 	heading.scrollIntoView?.({ block: 'start' });
@@ -234,6 +321,8 @@ function watchSettingsPage() {
 		}, 0);
 	};
 	new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+	// Sections drawn before async storage loaded get their saved folds then
+	whenGMStorageReady(schedule);
 	window.addEventListener('hashchange', schedule);
 	window.addEventListener('popstate', schedule);
 
@@ -403,7 +492,13 @@ function syncSettingsPage(active = location.pathname.startsWith('/settings/') &&
 			existing?.remove();
 			continue;
 		}
-		if (existing) continue;
+		if (existing) {
+			if (!existing.hasAttribute(SETTINGS_FOLD_SYNCED_ATTR) && isGMStorageReady()) {
+				setSettingsSectionOpen(existing, settingsSectionShouldBeOpen(section));
+				existing.setAttribute(SETTINGS_FOLD_SYNCED_ATTR, '');
+			}
+			continue;
+		}
 		// The site's own settings box and heading; our styles apply only
 		// inside the body, so the heading keeps the site's look
 		const el = document.createElement('section');
@@ -411,23 +506,49 @@ function syncSettingsPage(active = location.pathname.startsWith('/settings/') &&
 		const order = section.order ?? 0;
 		el.setAttribute(SETTINGS_SECTION_ORDER_ATTR, String(order));
 		el.className = 'terminal-box p-4 mb-3';
+		// The site's heading, holding a button that folds the section under it:
+		// the page holds several long sections. A heading inside <summary>
+		// would lose its heading role, so this is the disclosure pattern
 		const heading = document.createElement('h3');
 		// The site tightens the gap when a description follows
 		heading.className = `text-xs ${section.description ? 'mb-2' : 'mb-3'} uppercase tracking-wider`;
-		heading.textContent = section.title;
+		const toggle = document.createElement('button');
+		toggle.type = 'button';
+		toggle.className = uiClass('settings-fold');
+		const marker = document.createElement('span');
+		marker.className = uiClass('settings-fold-marker');
+		marker.setAttribute('aria-hidden', 'true');
+		const title = document.createElement('span');
+		title.textContent = section.title;
+		toggle.append(marker, title);
 		// Decorative, before the title: the script's own HTML
-		if (section.icon) heading.insertAdjacentHTML('afterbegin', section.icon);
+		if (section.icon) title.insertAdjacentHTML('beforebegin', section.icon);
+		heading.append(toggle);
 		el.append(heading);
+		const fold = document.createElement('div');
+		fold.id = uiId('settings-fold');
+		toggle.setAttribute('aria-controls', fold.id);
 		if (section.description) {
 			// The site's own description style, as under its settings headings
 			const description = document.createElement('p');
 			description.className = 'text-fg-dim text-sm mb-3';
 			description.textContent = section.description;
-			el.append(description);
+			fold.append(description);
 		}
 		const body = document.createElement('div');
 		body.className = uiClass('panel');
-		el.append(body);
+		fold.append(body);
+		el.append(fold);
+		// Until storage loads (async GM storage), the saved state is unknown:
+		// the default for now, and the saved one once syncSettingsPage runs again
+		setSettingsSectionOpen(el, settingsSectionShouldBeOpen(section));
+		if (isGMStorageReady()) el.setAttribute(SETTINGS_FOLD_SYNCED_ATTR, '');
+		toggle.addEventListener('click', () => {
+			settingsSectionsOpenedByLink.delete(section.key);
+			const open = toggle.getAttribute('aria-expanded') !== 'true';
+			setSettingsSectionOpen(el, open);
+			saveSettingsSectionOpen(section.key, open);
+		});
 		// Sorted by order, then key, so every script inserts in the same order
 		const next = Array.from(panel.children).find((other) => {
 			const otherKey = other.getAttribute(SETTINGS_SECTION_ATTR);

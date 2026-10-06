@@ -11,11 +11,15 @@ const COLORED_BY_US_ATTR = `data-${UI_PREFIX}-colored`;
  * nick colors is switched off, or for a non-friend while only friends are
  * colored.
  * Side effects: as applyStyles: inline styles, data attributes, icons; or
- * as unstyleUsername.
+ * as unstyleUsername; for a name the site writes, as adoptFriendSpelling.
  * @param {HTMLElement} element - marked by the username finder
  */
 function styleUsername(element) {
 	const username = usernameOf(element);
+	const isMention = element.hasAttribute(MENTION_ATTR);
+	// A mention is spelled as someone typed it; a name the site writes is the
+	// spelling colors and notes are saved under
+	if (!isMention) adoptFriendSpelling(username);
 	// Switched off, or a non-friend: left in the site's colors. Only names this
 	// script colored lose it. While the separate Nick Colors script runs, none
 	// do: it colors the same names, with the same data attributes, skips any
@@ -25,7 +29,7 @@ function styleUsername(element) {
 		return;
 	}
 	applyStyles(element, username, {
-		matchType: element.hasAttribute(MENTION_ATTR) ? 'mention' : 'nick',
+		matchType: isMention ? 'mention' : 'nick',
 	});
 	element.setAttribute(COLORED_BY_US_ATTR, '');
 }
@@ -33,10 +37,13 @@ function styleUsername(element) {
 /**
  * Style every username marked so far, again: after a settings change, or a
  * theme change. The marks stay, so nothing is searched for again.
- * Side effects: as styleUsername, on every marked name.
+ * Side effects: as styleUsername, on every marked name; restyles the settings
+ * tab's color previews.
  */
 function colorizeAll() {
 	document.querySelectorAll(USERNAME_SELECTOR).forEach(styleUsername);
+	// The settings tab's previews of each saved color
+	restyleNickColorList();
 }
 
 /**

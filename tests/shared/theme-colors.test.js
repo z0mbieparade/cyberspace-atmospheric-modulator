@@ -9,10 +9,10 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const SOURCE = readFileSync(join(__dirname, '..', '..', 'src', 'shared', 'theme-colors.js'), 'utf8');
-const { parseColor, rgbToHex, findThemeEntry, THEME_COLORS } = new Function(`const UI_PREFIX = 'atmo'; const LOG_PREFIX = '[Test]';
+const { parseColor, rgbToHex, findThemeEntry, THEME_COLORS, readableTextOn, getContrastRatio } = new Function(`const UI_PREFIX = 'atmo'; const LOG_PREFIX = '[Test]';
 	const localStorage = { getItem: () => null };
 	${SOURCE}
-	return { parseColor, rgbToHex, findThemeEntry, THEME_COLORS };`)();
+	return { parseColor, rgbToHex, findThemeEntry, THEME_COLORS, readableTextOn, getContrastRatio };`)();
 
 describe('findThemeEntry', () => {
 	it('finds a theme by its name in any case, or by the site id it is stored as', () => {
@@ -49,4 +49,17 @@ describe('parseColor to hex', () => {
 		expect(parseColor('#ABCDEF', 'hex')).toBe('#ABCDEF');
 		expect(parseColor('not a color', 'hex')).toBeNull();
 	});
+});
+
+describe('readableTextOn', () => {
+	it.each(Object.keys(THEME_COLORS))('makes %s\'s dim text readable on its background', (name) => {
+		const { bg, fgDim } = THEME_COLORS[name].colors;
+		expect(getContrastRatio(bg, readableTextOn(bg, fgDim))).toBeGreaterThanOrEqual(4.5);
+	});
+
+	it('falls back to black or white when the color\'s side of a mid-gray background cannot get there', () => {
+		// Stepping the lighter gray up stops at white, about 4.48:1 on #777777
+		expect(getContrastRatio('#777777', readableTextOn('#777777', '#999999'))).toBeGreaterThanOrEqual(4.5);
+	});
+
 });

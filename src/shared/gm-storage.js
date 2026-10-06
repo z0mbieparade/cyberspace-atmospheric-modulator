@@ -60,6 +60,20 @@ function isGMStorageReady() {
 	return _gmStorageReady;
 }
 
+// Run once storage is ready, after onGMStorageReady
+const _gmStorageReadyCallbacks = [];
+
+/**
+ * Run callback once reads return stored values: now, if they already do.
+ * For shared code, which cannot be onGMStorageReady itself.
+ * Side effects: may run callback.
+ * @param {Function} callback
+ */
+function whenGMStorageReady(callback) {
+	if (_gmStorageReady) callback();
+	else _gmStorageReadyCallbacks.push(callback);
+}
+
 // Wrapper functions that handle both sync and async APIs uniformly
 // For setValue: fire-and-forget (don't need to wait), also update cache
 const _GM_setValue = _hasSyncGM ? GM_setValue :
@@ -151,6 +165,15 @@ if (_hasAsyncGM) {
 		} catch (e) {
 			console.error(LOG_PREFIX + ' Failed to start after loading GM storage:', e);
 		}
+		// Each on its own, so one that throws leaves the rest to run
+		for (const callback of _gmStorageReadyCallbacks) {
+			try {
+				callback();
+			} catch (e) {
+				console.error(LOG_PREFIX + ' A step waiting for GM storage failed:', e);
+			}
+		}
+		_gmStorageReadyCallbacks.length = 0;
 	});
 } else if (_hasSyncGM) {
 	// Also migrate for old GM API. It runs in a microtask despite the sync GM

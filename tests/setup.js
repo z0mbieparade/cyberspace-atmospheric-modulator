@@ -17,7 +17,7 @@ const config = require('../userscript.config.js');
 const dom = createTestEnvironment('<head></head><body><div id="__nuxt" data-v-app></div></body>');
 
 // init.js is left out: it has side effects, and init.test.js runs it itself
-const code = readBundleSource(config, { version: '0.2.2', skip: ['init.js'] });
+const code = readBundleSource(config, { version: '0.2.3', skip: ['init.js'] });
 
 runAndExpose(code, [
 	// Shared runtime and the globals it reads
@@ -58,6 +58,11 @@ runAndExpose(code, [
 	'FEATURES',
 	'startFeatures',
 	'registerFeature',
+	'syncSettingsPage',
+	'registerSettingsSection',
+	'USER_LIST_SECTION_KEY',
+	'registerUserListSection',
+	'refreshUserList',
 	'applySettings',
 
 	// Settings panel

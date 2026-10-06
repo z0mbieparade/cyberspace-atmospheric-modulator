@@ -80,6 +80,9 @@ initNickNotes();
  * @param {string} username
  */
 function createNotesDialog(username) {
+	// The menu passes the name as this page spells it; the note may be saved
+	// under another case, and a second key would hide it
+	const noteKey = notesKeyFor(username);
 	const textareaId = uiId('nick-notes');
 	const dialog = createDialog({
 		title: `Notes: ${escapeHtml(username)}`,
@@ -93,15 +96,17 @@ function createNotesDialog(username) {
 			id: textareaId,
 			label: 'Notes',
 			hint: 'Only you see these, when you hover their name.',
-			value: nickNotes[username] || '',
+			value: nickNotes[noteKey] || '',
 		}),
 		buttons: [
 			{ label: 'Save', class: 'save', onClick: (close) => {
 				const notes = textarea.value.trim();
-				if (notes) nickNotes[username] = notes;
-				else delete nickNotes[username];
+				if (notes) nickNotes[noteKey] = notes;
+				else delete nickNotes[noteKey];
 				saveNickNotes();
 				close();
+				// After close, which returns focus to what opened the dialog
+				refreshUserList(username);
 			} },
 			{ label: 'Cancel', class: 'cancel', onClick: (close) => close() },
 		],
@@ -142,7 +147,8 @@ function getNotesTooltip() {
  */
 function showNotesTooltip(target) {
 	hideNotesTooltip();
-	const notes = nickNotes[usernameOf(target)];
+	// Whatever the case it was saved under, as from the Users section
+	const notes = nickNotes[notesKeyFor(usernameOf(target))];
 	target.classList.toggle('nn-has-notes', !!notes);
 	if (!notes) return;
 	notesTooltipTarget = target;

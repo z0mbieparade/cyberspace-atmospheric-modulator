@@ -28,7 +28,7 @@ const BACKUP_SECTION_TITLE = 'Backup & Troubleshooting';
 const SETTINGS_SECTION_DESCRIPTION = 'Usability features userscript: undither an image, give nicknames a hashed color, and keep notes on them. Changes save as you make them.';
 // Published in users' localStorage: never change it
 const STORAGE_PREFIX = 'atmosphericModulator_';
-const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion',
+const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion', 'settingsSectionsOpen',
 	// image-undither
 	'unditherMissedPage',
 	// nick-colors

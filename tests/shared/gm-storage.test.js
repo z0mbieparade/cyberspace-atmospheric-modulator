@@ -17,7 +17,8 @@ const GM_STORAGE_SOURCE = readFileSync(join(__dirname, '..', '..', 'src', 'share
  * Evaluate gm-storage.js with the given GM API mocks injected.
  * @param {Object} mocks - { GM_getValue, GM_setValue, GM, localStorage, console }
  * @returns {Object} the shim's internals, plus readyCalls: how often
- *   onGMStorageReady ran
+ *   onGMStorageReady ran; readyOrder: onGMStorageReady and the callbacks
+ *   that push to it, in the order they ran
  */
 function loadStorageShim({ GM_getValue, GM_setValue, GM, localStorage, console: consoleMock } = {}) {
 	const factory = new Function(
@@ -26,10 +27,11 @@ function loadStorageShim({ GM_getValue, GM_setValue, GM, localStorage, console: 
 		const STORAGE_PREFIX = 'test_';
 		const GM_STORAGE_KEYS = ['debugMode', 'config'];
 		let readyCalls = 0;
-		function onGMStorageReady() { readyCalls++; }
+		const readyOrder = [];
+		function onGMStorageReady() { readyCalls++; readyOrder.push('onGMStorageReady'); }
 		${GM_STORAGE_SOURCE}
 		return { _GM_getValue, _GM_setValue, _hasSyncGM, _hasAsyncGM, _initGMCache, _gmCache,
-			isGMStorageReady, readyCalls: () => readyCalls };`
+			isGMStorageReady, whenGMStorageReady, readyCalls: () => readyCalls, readyOrder };`
 	);
 	return factory(GM_getValue, GM_setValue, GM, localStorage, consoleMock ?? console);
 }
@@ -200,6 +202,27 @@ describe('GM storage shim', () => {
 			expect(shim.isGMStorageReady()).toBe(true);
 			expect(shim.readyCalls()).toBe(1);
 			expect(errors.some(([msg]) => String(msg) === '[Test] Failed to load GM cache:')).toBe(true);
+		});
+	});
+
+	describe('waiting for storage (whenGMStorageReady)', () => {
+		const asyncGM = () => ({ getValue: async () => undefined, setValue: async () => {} });
+
+		it('runs each waiting callback once, after onGMStorageReady, even when one throws', async () => {
+			const errors = [];
+			const shim = loadStorageShim({ GM: asyncGM(), localStorage, console: { ...silentConsole, error: (...a) => errors.push(a) } });
+			shim.whenGMStorageReady(() => shim.readyOrder.push('first'));
+			shim.whenGMStorageReady(() => { throw new Error('broken'); });
+			shim.whenGMStorageReady(() => shim.readyOrder.push('last'));
+			expect(shim.readyOrder, 'nothing before storage loads').toEqual([]);
+
+			await flushHydration();
+			expect(shim.readyOrder).toEqual(['onGMStorageReady', 'first', 'last']);
+			expect(errors.map(([msg]) => msg)).toEqual(['[Test] A step waiting for GM storage failed:']);
+
+			// Ready now: a new one runs at once, and the old ones do not run again
+			shim.whenGMStorageReady(() => shim.readyOrder.push('late'));
+			expect(shim.readyOrder).toEqual(['onGMStorageReady', 'first', 'last', 'late']);
 		});
 	});
 

@@ -336,6 +336,22 @@ function getContrastRatio(color1, color2) {
 }
 
 /**
+ * A text color readable on bg, as close to color as can be: color stepped in
+ * lightness until it reaches threshold. When its side of bg cannot get there
+ * (a mid-gray background), black or white, whichever reads better: one of
+ * them always reaches 4.5:1. The background never moves.
+ * @param {string} bg
+ * @param {string} color
+ * @param {number} [threshold=4.5]
+ * @returns {string} a color string
+ */
+function readableTextOn(bg, color, threshold = 4.5) {
+	const stepped = adjustContrastToThreshold(bg, color, threshold, 'hsl-string').colorAdjust;
+	if (getContrastRatio(bg, stepped) >= threshold) return stepped;
+	return getContrastRatio(bg, '#000000') >= getContrastRatio(bg, '#ffffff') ? '#000000' : '#ffffff';
+}
+
+/**
  * Step lightness by 5% until two colors reach a contrast ratio, at most 20
  * steps. colorAdjust moves, unless it is already black or white; then
  * colorCompare moves instead.
@@ -607,6 +623,10 @@ function getThemeColors(themeName = null, colorFormat = null)
 		}
 	}
 
+	// The theme's dim text, made readable where it is not: themes set fg-dim
+	// for hints, often below 4.5:1 on their background
+	if (colors.fgDim && colors.bg) colors.fgMuted = readableTextOn(colors.bg, colors.fgDim);
+
 	if(colorFormat)
 	{
 		for(const key in colors)
@@ -635,6 +655,7 @@ function initThemeVariables(themeName = null) {
 	root.style.setProperty('--' + UI_PREFIX + '-bg', colors.bg);
 	root.style.setProperty('--' + UI_PREFIX + '-fg', colors.fg);
 	root.style.setProperty('--' + UI_PREFIX + '-fg-dim', colors.fgDim);
+	root.style.setProperty('--' + UI_PREFIX + '-fg-muted', colors.fgMuted);
 	root.style.setProperty('--' + UI_PREFIX + '-border', colors.border);
 	root.style.setProperty('--' + UI_PREFIX + '-code-bg', colors.codeBg);
 	root.style.setProperty('--' + UI_PREFIX + '-inverted-bg', colors.invertedBg);

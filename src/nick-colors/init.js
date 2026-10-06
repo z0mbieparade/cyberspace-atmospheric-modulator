@@ -13,6 +13,8 @@ function fetchOverrides() {
 			// Every install applies these: only safe styles get through (sanitize.js)
 			const remoteOverrides = sanitizeNickStyles(JSON.parse(text), 'imported');
 			MANUAL_OVERRIDES = { ...remoteOverrides, ...MANUAL_OVERRIDES };
+			// The list's previews draw overridden names in their override
+			restyleNickColorList();
 			logDebug(NICK_LOG_PREFIX + ' Loaded remote overrides:', Object.keys(remoteOverrides).length);
 		})
 		.catch(e => console.error(NICK_LOG_PREFIX + ' Failed to load remote overrides:', e));
@@ -33,13 +35,18 @@ registerFeature({
 	exportBackup: () => minifyKeys(exportSettings()),
 	importBackup(data, booted) {
 		const result = importSettings(data, { recolor: booted, replaceAll: true });
-		if (result.success) refreshSettingsSection(SETTINGS_SECTION_KEY);
+		if (result.success) {
+			refreshSettingsSection(SETTINGS_SECTION_KEY);
+			// Its colors and friends are rows there too
+			refreshUserList();
+		}
 		return { ...result, notice: droppedStylesNote(result.dropped, 'imported').trim() };
 	},
 	resetSettings(booted) {
 		// An import of nothing: every setting and per-name style at its default
 		const result = importSettings({}, { recolor: booted, replaceAll: true });
 		refreshSettingsSection(SETTINGS_SECTION_KEY);
+		refreshUserList();
 		// importSettings reports a failure rather than throwing
 		if (!result.success) throw new Error(result.message);
 	},
@@ -56,15 +63,24 @@ registerFeature({
 		loadSiteTheme();
 		initThemeVariables();
 
-		// Raw styles, so the sliders show the saved values before range mapping
-		const editColor = username => createUserSettingsPanel(username, getRawStylesForPicker(username));
 		// Switched off: gone from the menu now, not after a reload. With only
 		// friends colored, a friend can be edited or removed, anyone else added
 		const friendsOnly = () => featureConfig.nickColors && nickFriends.enabled;
-		registerUserMenuItem({ label: 'Color', order: 10, showFor: () => featureConfig.nickColors && !nickFriends.enabled, onSelect: editColor });
+		registerUserMenuItem({ label: 'Color', order: 10, showFor: () => featureConfig.nickColors && !nickFriends.enabled, onSelect: editNickColor });
 		registerUserMenuItem({ label: 'Add Color', order: 10, showFor: username => friendsOnly() && !isNickFriend(username), onSelect: username => setNickFriend(username, true) });
-		registerUserMenuItem({ label: 'Edit Color', order: 10, showFor: username => friendsOnly() && isNickFriend(username), onSelect: editColor });
+		registerUserMenuItem({ label: 'Edit Color', order: 10, showFor: username => friendsOnly() && isNickFriend(username), onSelect: editNickColor });
 		registerUserMenuItem({ label: 'Remove Color', order: 11, showFor: username => friendsOnly() && isNickFriend(username), onSelect: username => setNickFriend(username, false) });
+
+		// The Users section on the settings tab: each name as the page draws it, and
+		// the star that makes them a choom
+		registerUserListSource({
+			order: 10,
+			isShown: () => featureConfig.nickColors,
+			usernames: () => [...Object.keys(customNickColors), ...nickFriends.users],
+			name: nickColorListName,
+			parts: nickColorListParts,
+			actions: nickColorListActions,
+		});
 
 		if (registerMenuCommand) {
 			registerMenuCommand('Nick Colors Settings', createSettingsPanel);

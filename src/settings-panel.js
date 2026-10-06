@@ -103,6 +103,8 @@ function applySettings(values) {
 	// A booted feature hears its switch change; one turned on starts now
 	featuresSwitched(previous);
 	bootFeatures();
+	// Its part of the Users section follows its switch too
+	refreshUserList();
 	// A feature's section on the settings tab follows its switch now
 	syncSettingsPage();
 }
