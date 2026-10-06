@@ -94,11 +94,12 @@ describe('dither hook pipeline', () => {
 		expect(imageMap.get(objectUrl)).toBe(ORIGINAL_A);
 	});
 
-	it('does not tag a drawImage whose source is not an image', () => {
-		const otherCanvas = dom.window.document.createElement('canvas');
+	it('clears the tag for a drawImage whose source is neither an image nor a canvas', () => {
 		const dst = dom.window.document.createElement('canvas');
+		dst.__atmoSrc = ORIGINAL_A;
+		// An ImageBitmap, say: no tagName, so no URL to carry
 		dom.window.CanvasRenderingContext2D.prototype.drawImage.call(
-			{ canvas: dst }, otherCanvas, 0, 0
+			{ canvas: dst }, {}, 0, 0
 		);
 		expect(dst.__atmoSrc).toBeUndefined();
 	});
@@ -563,7 +564,7 @@ describe('diagnoseImageUndither', () => {
 		expect(loggedText()).toContain('unsafeWindow = undefined');
 		expect(loggedText()).toContain('hooks live (drawImage / texImage2D / toBlob / createObjectURL) = true true true true');
 		// jsdom implements the src accessor but no fetch, so only the src probe can land
-		expect(loggedText()).toContain('first-stage probes live (src / fetch) = true false');
+		expect(loggedText()).toContain('first-stage probes live (src / fetch / gif arrayBuffer) = true false');
 		expect(loggedText()).toContain('image map size = 1');
 		expect(loggedText()).toContain('blob imgs in DOM = 2 of 2 imgs, mapped = 1');
 		expect(loggedText()).toContain('drawImage-http / drawImage-blob -> texImage2D-tagged -> toBlob-tagged -> createObjectURL-matched) =');
@@ -585,6 +586,242 @@ describe('diagnoseImageUndither', () => {
 			proto.toBlob = ours;
 		}
 		expect(loggedText()).toContain('hooks live (drawImage / texImage2D / toBlob / createObjectURL) = true true false true');
+	});
+});
+
+describe('GIFs', () => {
+	const GIF_URL = 'https://latex.gg/share/CNCBS0Ba.gif';
+
+	// A page realm with the hooks, and a stand-in Response: jsdom has none
+	const gifRealm = () => {
+		const w = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'https://cyberspace.online/', runScripts: 'outside-only' }).window;
+		setupCanvasStubs(w);
+		w.Response = class {
+			constructor(url, buffer) { this.url = url; this.buffer = buffer; }
+			arrayBuffer() { return Promise.resolve(this.buffer); }
+		};
+		installPageHooks(w, PAGE_HOOK_EVENTS);
+		return w;
+	};
+	// A GIF header: the logical screen size is little-endian at bytes 6-9
+	const gifBytes = (width, height) => {
+		const bytes = new Uint8Array(16);
+		bytes.set([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, width & 255, width >> 8, height & 255, height >> 8]);
+		return bytes.buffer;
+	};
+	const proxyUrl = (url) => 'https://cyberspace.online/api/gif-proxy?url=' + encodeURIComponent(url);
+	const canvasOf = (w, width, height) => {
+		const c = w.document.createElement('canvas');
+		c.width = width;
+		c.height = height;
+		return c;
+	};
+	const draw = (w, dest, source) => w.CanvasRenderingContext2D.prototype.drawImage.call({ canvas: dest }, source, 0, 0);
+
+	// What the site's decoder and ChatGifMessage do, through the hooks
+	const decodeAndShow = async (w, url, width, height) => {
+		await new w.Response(proxyUrl(url), gifBytes(width, height)).arrayBuffer();
+		const composite = canvasOf(w, width, height);
+		const frames = [];
+		for (let i = 0; i < 2; i++) {
+			draw(w, composite, canvasOf(w, width, height)); // a decoded frame patch
+			const frame = canvasOf(w, width, height);
+			draw(w, frame, composite);
+			frames.push(frame);
+		}
+		const gl = canvasOf(w, width, height);
+		const visible = canvasOf(w, width, height);
+		w.document.body.appendChild(visible);
+		for (const frame of frames) {
+			w.WebGLRenderingContext.prototype.texImage2D.call({ canvas: gl }, 0, 0, 0, 0, 0, frame);
+			draw(w, visible, gl);
+		}
+		return { visible, frames };
+	};
+
+	it('marks the visible canvas with the GIF\'s original, through every frame', async () => {
+		const w = gifRealm();
+		const { visible, frames } = await decodeAndShow(w, GIF_URL, 225, 400);
+		expect(frames.map(f => f.__atmoSrc)).toEqual([GIF_URL, GIF_URL]);
+		expect(visible.getAttribute(PAGE_HOOK_EVENTS.originalAttr)).toBe(GIF_URL);
+	});
+
+	it('marks a visible canvas drawn before the site inserts it', async () => {
+		const w = gifRealm();
+		await new w.Response(proxyUrl(GIF_URL), gifBytes(320, 218)).arrayBuffer();
+		const frame = canvasOf(w, 320, 218);
+		draw(w, frame, canvasOf(w, 320, 218));
+		const gl = canvasOf(w, 320, 218);
+		w.WebGLRenderingContext.prototype.texImage2D.call({ canvas: gl }, 0, 0, 0, 0, 0, frame);
+		// A one-frame GIF: its only draw, before the canvas is in the page
+		const visible = canvasOf(w, 320, 218);
+		draw(w, visible, gl);
+		w.document.body.appendChild(visible);
+		expect(visible.getAttribute(PAGE_HOOK_EVENTS.originalAttr)).toBe(GIF_URL);
+	});
+
+	it('matches each GIF to the canvas of its own size', async () => {
+		const w = gifRealm();
+		const other = 'https://latex.gg/share/other.gif';
+		await new w.Response(proxyUrl(other), gifBytes(100, 50)).arrayBuffer();
+		const { visible, frames } = await decodeAndShow(w, GIF_URL, 225, 400);
+		expect(frames.map(f => f.__atmoSrc)).toEqual([GIF_URL, GIF_URL]);
+		expect(visible.getAttribute(PAGE_HOOK_EVENTS.originalAttr)).toBe(GIF_URL);
+	});
+
+	it('keeps a GIF\'s tag when another of the same size is fetched mid-decode', async () => {
+		const w = gifRealm();
+		const other = 'https://latex.gg/share/same-size.gif';
+		await new w.Response(proxyUrl(GIF_URL), gifBytes(225, 400)).arrayBuffer();
+		const composite = canvasOf(w, 225, 400);
+		draw(w, composite, canvasOf(w, 225, 400));
+		await new w.Response(proxyUrl(other), gifBytes(225, 400)).arrayBuffer();
+		draw(w, composite, canvasOf(w, 225, 400));
+		expect(composite.__atmoSrc).toBe(GIF_URL);
+
+		const otherComposite = canvasOf(w, 225, 400);
+		draw(w, otherComposite, canvasOf(w, 225, 400));
+		expect(otherComposite.__atmoSrc).toBe(other);
+	});
+
+	it('drops the mark when the visible canvas is drawn from something untagged', async () => {
+		const w = gifRealm();
+		const { visible } = await decodeAndShow(w, GIF_URL, 225, 400);
+		// A GIF that went unmatched now plays on the same canvas
+		const gl = canvasOf(w, 225, 400);
+		w.WebGLRenderingContext.prototype.texImage2D.call({ canvas: gl }, 0, 0, 0, 0, 0, canvasOf(w, 225, 400));
+		draw(w, visible, gl);
+		expect(visible.hasAttribute(PAGE_HOOK_EVENTS.originalAttr)).toBe(false);
+
+		const again = (await decodeAndShow(w, GIF_URL, 225, 400)).visible;
+		draw(w, again, {});
+		expect(again.hasAttribute(PAGE_HOOK_EVENTS.originalAttr)).toBe(false);
+	});
+
+	it('lets an unclaimed GIF go after its task, so a later one of its size keeps its own original', async () => {
+		const w = gifRealm();
+		const lost = 'https://latex.gg/share/never-decoded.gif';
+		await new w.Response(proxyUrl(lost), gifBytes(225, 400)).arrayBuffer();
+		await new Promise(resolve => setTimeout(resolve, 0));
+		const { visible } = await decodeAndShow(w, GIF_URL, 225, 400);
+		expect(visible.getAttribute(PAGE_HOOK_EVENTS.originalAttr)).toBe(GIF_URL);
+	});
+
+	it('keeps a later GIF\'s own original while a stale one of its size is still queued', async () => {
+		const w = gifRealm();
+		const lost = 'https://latex.gg/share/never-decoded.gif';
+		// A background tab can delay the expiry timer past the next GIF's read
+		await new w.Response(proxyUrl(lost), gifBytes(225, 400)).arrayBuffer();
+		const { visible } = await decodeAndShow(w, GIF_URL, 225, 400);
+		expect(visible.getAttribute(PAGE_HOOK_EVENTS.originalAttr)).toBe(GIF_URL);
+	});
+
+	it('clears a still image\'s tag when an untagged canvas is drawn over it', () => {
+		const w = gifRealm();
+		const work = canvasOf(w, 225, 400);
+		const img = w.document.createElement('img');
+		img.src = ORIGINAL_A;
+		draw(w, work, img);
+		draw(w, work, canvasOf(w, 225, 400));
+		expect(work.__atmoSrc).toBeUndefined();
+	});
+
+	it('marks only GIF canvases, not one an image is drawn straight onto', () => {
+		const w = gifRealm();
+		const visible = canvasOf(w, 225, 400);
+		w.document.body.appendChild(visible);
+		const sprite = w.document.createElement('img');
+		sprite.src = ORIGINAL_A;
+		draw(w, visible, sprite);
+		expect(visible.hasAttribute(PAGE_HOOK_EVENTS.originalAttr)).toBe(false);
+	});
+
+	it('ignores responses that are not the GIF proxy', async () => {
+		const w = gifRealm();
+		await new w.Response('https://cyberspace.online/api/other?url=' + encodeURIComponent(GIF_URL), gifBytes(225, 400)).arrayBuffer();
+		const dest = canvasOf(w, 225, 400);
+		draw(w, dest, canvasOf(w, 225, 400));
+		expect(dest.__atmoSrc).toBeUndefined();
+	});
+
+	it('lays the original over a marked canvas while hovered', () => {
+		const canvas = dom.window.document.createElement('canvas');
+		canvas.setAttribute(PAGE_HOOK_EVENTS.originalAttr, GIF_URL);
+		dom.window.document.body.appendChild(canvas);
+
+		canvas.dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true }));
+		const overlay = canvas.nextElementSibling;
+		expect(overlay && overlay.tagName).toBe('IMG');
+		expect(overlay.getAttribute('src')).toBe(GIF_URL);
+
+		canvas.dispatchEvent(new dom.window.MouseEvent('mouseout', { bubbles: true }));
+		expect(canvas.nextElementSibling).toBeNull();
+		canvas.remove();
+	});
+
+	describe('overlay lifetime', () => {
+		const markedCanvas = () => {
+			const parent = dom.window.document.createElement('div');
+			const canvas = dom.window.document.createElement('canvas');
+			canvas.setAttribute(PAGE_HOOK_EVENTS.originalAttr, GIF_URL);
+			parent.appendChild(canvas);
+			dom.window.document.body.appendChild(parent);
+			return { parent, canvas };
+		};
+		const hover = (canvas, type) => canvas.dispatchEvent(new dom.window.MouseEvent(type, { bubbles: true }));
+		// MutationObserver callbacks run as a microtask
+		const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+		it('anchors the overlay to the canvas\'s parent while revealed, then restores it', () => {
+			const { parent, canvas } = markedCanvas();
+			hover(canvas, 'mouseover');
+			expect(parent.style.position).toBe('relative');
+			hover(canvas, 'mouseout');
+			expect(parent.style.position).toBe('');
+			parent.remove();
+		});
+
+		it('goes on mouseout even when the canvas lost its mark mid-hover', () => {
+			const { parent, canvas } = markedCanvas();
+			hover(canvas, 'mouseover');
+			canvas.removeAttribute(PAGE_HOOK_EVENTS.originalAttr);
+			hover(canvas, 'mouseout');
+			expect(parent.querySelector('img')).toBeNull();
+			expect(parent.style.position).toBe('');
+			parent.remove();
+		});
+
+		it('goes when another GIF starts playing on the canvas mid-hover', async () => {
+			const { parent, canvas } = markedCanvas();
+			hover(canvas, 'mouseover');
+			canvas.setAttribute(PAGE_HOOK_EVENTS.originalAttr, 'https://latex.gg/share/next.gif');
+			await settle();
+			expect(parent.querySelector('img')).toBeNull();
+			parent.remove();
+		});
+
+		it('goes when a re-render removes the canvas mid-hover', async () => {
+			const { parent, canvas } = markedCanvas();
+			hover(canvas, 'mouseover');
+			expect(parent.querySelector('img')).not.toBeNull();
+			canvas.remove();
+			await settle();
+			expect(parent.querySelector('img')).toBeNull();
+			parent.remove();
+		});
+
+		it('stays when an earlier overlay fails to load', () => {
+			const { parent, canvas } = markedCanvas();
+			hover(canvas, 'mouseover');
+			const first = canvas.nextElementSibling;
+			hover(canvas, 'mouseout');
+			hover(canvas, 'mouseover');
+			const second = canvas.nextElementSibling;
+			first.dispatchEvent(new dom.window.Event('error'));
+			expect(second.isConnected).toBe(true);
+			hover(canvas, 'mouseout');
+			parent.remove();
+		});
 	});
 });
 

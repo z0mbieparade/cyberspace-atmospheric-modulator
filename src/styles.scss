@@ -14,6 +14,13 @@
 	object-fit: cover;
 }
 
+// A GIF's original, laid over its dithered canvas (image-undither.js sets
+// its place and size)
+.atmo-gif-overlay {
+	position: absolute;
+	pointer-events: none;
+}
+
 // The sidebar link to the settings tab: open, its label, at the left;
 // collapsed, its icon alone, centered. Its dashed border is set inline (sidebar-link.js)
 .atmo-sidebar-link {

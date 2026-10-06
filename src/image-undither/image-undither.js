@@ -19,6 +19,17 @@ const IMAGE_LOG_PREFIX = featureLogPrefix('image-undither');
 // tag is always read before the shared WebGL canvas is reused for the next
 // image. The hooks must be in place before the engine first runs, hence
 // @run-at document-start.
+//
+// GIFs (ChatGifMessage) take another road: fetch('/api/gif-proxy?url=<original>')
+// -> the site's own GIF decoder -> one 2D canvas per frame. Each tick, a frame
+// goes through texImage2D into the same WebGL canvas and is drawn with
+// drawImage onto the visible <canvas>; no <img> or blob is involved. The
+// decoder is opaque, so the proxy response's arrayBuffer() records the
+// original with the GIF's size from its header, and the first canvas of that
+// size a frame canvas is drawn onto takes the tag. Canvas-to-canvas draws
+// carry it on, and a tagged canvas in the document gets the original in
+// PAGE_HOOK_EVENTS.originalAttr, which both realms can read; hovering it lays
+// the original GIF over it.
 
 // Blob -> original pairs and the diagnostics travel between the page hooks and
 // the userscript as DOM events: the document is the one thing both realms
@@ -29,6 +40,9 @@ const PAGE_HOOK_EVENTS = {
 	mapped: 'atmo:image-mapped',        // page -> userscript, detail [blobUrl, originalUrl]
 	statsRequest: 'atmo:stats-request', // userscript -> page, answered synchronously
 	stats: 'atmo:stats',                // page -> userscript, detail: the page's counters
+	// Not an event: the attribute on a visible canvas the hooks tagged, holding
+	// its original's URL. Here so the injected hooks get it with the names
+	originalAttr: 'data-atmo-original',
 };
 
 const imageMap = new Map();          // blob: URL -> original URL
@@ -67,10 +81,11 @@ function recordImageMap(objectUrl, url) {
  * wrappers would count each call twice and send each mapping twice.
  *
  * Side effects: replaces drawImage, texImage2D, toBlob, URL.createObjectURL,
- * the HTMLImageElement src setter and fetch on pageWindow; adds one listener
+ * Response.arrayBuffer, the HTMLImageElement src setter and fetch on
+ * pageWindow; sets events.originalAttr on GIF canvases; adds one listener
  * for events.statsRequest on its document.
  * @param {Window} pageWindow - the realm whose prototypes the site's engine uses
- * @param {{mapped: string, statsRequest: string, stats: string}} events - PAGE_HOOK_EVENTS
+ * @param {{mapped: string, statsRequest: string, stats: string, originalAttr: string}} events - PAGE_HOOK_EVENTS
  */
 function installPageHooks(pageWindow, events) {
 	const doc = pageWindow.document;
@@ -80,6 +95,13 @@ function installPageHooks(pageWindow, events) {
 	if (!state) {
 		state = {
 			pendingBlobs: new WeakMap(),  // Blob -> original URL (toBlob -> createObjectURL)
+			// GIFs fetched and not yet matched to their decode canvas, oldest first:
+			// { url, width, height }. The decoder runs straight through once the
+			// body is read, so an entry still here a timer later never decoded
+			pendingGifs: [],
+			// The originals of GIFs matched to a canvas: only those mark a
+			// visible canvas, not any image drawn onto one
+			gifOriginals: new Set(),
 			wrappers: {},                 // hook name -> our installed function, for the live check
 			// Per-stage call counts. When the map ends up empty the final state
 			// alone cannot say which stage failed, so each hook counts the calls
@@ -88,6 +110,9 @@ function installPageHooks(pageWindow, events) {
 				drawImageHttp: 0,      // drawImage of an http(s) <img>: the tag is set here
 				drawImageBlob: 0,      // drawImage of a blob: <img>: the tag is set here
 				drawImageOther: 0,     // drawImage of anything else: the tag is cleared here
+				drawImageCanvas: 0,    // drawImage of a canvas: its tag, or a fetched GIF's, carries on
+				gifFetched: 0,         // a GIF proxy response read by the site's decoder
+				gifTagged: 0,          // a fetched GIF matched to the canvas it decodes into
 				texImage2DTagged: 0,   // texImage2D whose source carried a tag
 				texImage2DUntagged: 0, // texImage2D whose source had no tag
 				toBlobTagged: 0,       // toBlob on a tagged canvas: the blob is recorded
@@ -127,6 +152,7 @@ function installPageHooks(pageWindow, events) {
 					createObjectURL: isLive(pageWindow.URL && pageWindow.URL.createObjectURL, 'createObjectURL'),
 					src: isLive(srcDesc && srcDesc.set, 'src'),
 					fetch: isLive(pageWindow.fetch, 'fetch'),
+					gifArrayBuffer: isLive(pageWindow.Response && pageWindow.Response.prototype.arrayBuffer, 'arrayBuffer'),
 				},
 				pipelineStats: state.pipelineStats,
 				firstStageStats: state.firstStageStats,
@@ -135,17 +161,24 @@ function installPageHooks(pageWindow, events) {
 		});
 	}
 
-	const { pendingBlobs, wrappers, pipelineStats, firstStageStats, firstStageErrors } = state;
+	const { pendingBlobs, pendingGifs, gifOriginals, wrappers, pipelineStats, firstStageStats, firstStageErrors } = state;
 	const recordFirstStageError = (entry) => {
 		firstStageErrors.push(entry);
 		if (firstStageErrors.length > 8) firstStageErrors.shift();
 	};
 
-	// drawImage: tag the destination 2D canvas with the source image's URL. A
-	// source that is neither an http(s) nor a blob: image clears any stale tag
-	// so a later toBlob on the same canvas cannot map a leftover URL. (Worst
-	// case for blob: sources: a pass that draws an already-dithered blob maps
-	// dither to dither - harmless, and a lookup cannot cycle.)
+	// drawImage: tag the destination 2D canvas with the source image's URL. An
+	// http(s) or blob: image sets the tag. (Worst case for blob: sources: a
+	// pass that draws an already-dithered blob maps dither to dither -
+	// harmless, and a lookup cannot cycle.) A canvas source carries its tag
+	// on. An untagged canvas source onto a detached canvas with a GIF's tag
+	// leaves it, since the decoder draws every later frame untagged onto the
+	// same canvas; onto any other detached canvas it clears the tag, then
+	// takes a fetched GIF's when the sizes match: the decoder's first frame.
+	// Anything else clears the tag, so a later toBlob or hover cannot use a
+	// leftover URL.
+	// A canvas mirrors a GIF's tag into events.originalAttr, or loses the
+	// attribute with it.
 	const drawImageProto = pageWindow.CanvasRenderingContext2D && pageWindow.CanvasRenderingContext2D.prototype;
 	if (drawImageProto && typeof drawImageProto.drawImage === 'function' && drawImageProto.drawImage !== wrappers.drawImage) {
 		const origDrawImage = drawImageProto.drawImage;
@@ -159,9 +192,47 @@ function installPageHooks(pageWindow, events) {
 				} else if (typeof url === 'string' && /^blob:/.test(url)) {
 					this.canvas.__atmoSrc = url;
 					pipelineStats.drawImageBlob++;
+				} else if (image && image.tagName === 'CANVAS') {
+					pipelineStats.drawImageCanvas++;
+					const dest = this.canvas;
+					if (image.__atmoSrc) {
+						dest.__atmoSrc = image.__atmoSrc;
+					} else if (dest.isConnected) {
+						delete dest.__atmoSrc;
+					} else if (!gifOriginals.has(dest.__atmoSrc)) {
+						delete dest.__atmoSrc;
+						// Newest first: the decoder that is running is usually the one
+						// whose body was read last, and an older entry of the same
+						// size is one that never decoded, still waiting out its
+						// expiry. Two same-size bodies read in one microtask
+						// checkpoint swap originals; no hook runs between a body's
+						// read and its decoder, so that case is left alone
+						let gif = pendingGifs.length - 1;
+						while (gif >= 0 && !(pendingGifs[gif].width === dest.width && pendingGifs[gif].height === dest.height)) gif--;
+						if (gif !== -1) {
+							dest.__atmoSrc = pendingGifs[gif].url;
+							gifOriginals.add(dest.__atmoSrc);
+							pendingGifs.splice(gif, 1);
+							pipelineStats.gifTagged++;
+						}
+					}
 				} else {
 					delete this.canvas.__atmoSrc;
 					pipelineStats.drawImageOther++;
+				}
+				// The visible canvas: the userscript's realm reads the attribute.
+				// Set even before it joins the document: the site can draw a
+				// GIF's frame first and insert the canvas after, and a one-frame
+				// GIF never draws again. The decoder's canvases get it too,
+				// harmlessly, as they never join the document
+				const dest = this.canvas;
+				if (typeof dest.getAttribute === 'function') {
+					const original = dest.__atmoSrc;
+					if (typeof original === 'string' && gifOriginals.has(original)) {
+						if (dest.getAttribute(events.originalAttr) !== original) dest.setAttribute(events.originalAttr, original);
+					} else if (dest.hasAttribute(events.originalAttr)) {
+						dest.removeAttribute(events.originalAttr);
+					}
 				}
 			}
 			return origDrawImage.apply(this, args);
@@ -273,6 +344,42 @@ function installPageHooks(pageWindow, events) {
 			});
 			wrappers.src = srcWrapper;
 		} catch (e) { /* reported as src not live */ }
+	}
+
+	// Response.arrayBuffer: the GIF proxy's body, read by the site's decoder.
+	// Record the original and the GIF's size (header bytes 6-9, little-endian)
+	// before the decoder runs: it resumes after this promise, synchronously
+	// through to its last frame canvas.
+	const responseProto = pageWindow.Response && pageWindow.Response.prototype;
+	if (responseProto && typeof responseProto.arrayBuffer === 'function' && responseProto.arrayBuffer !== wrappers.arrayBuffer) {
+		const origArrayBuffer = responseProto.arrayBuffer;
+		wrappers.arrayBuffer = responseProto.arrayBuffer = function (...args) {
+			const body = origArrayBuffer.apply(this, args);
+			let original = null;
+			try {
+				const at = new pageWindow.URL(this.url);
+				if (at.origin === pageWindow.location.origin && at.pathname === '/api/gif-proxy') {
+					original = at.searchParams.get('url');
+				}
+			} catch (e) { original = null; }
+			if (!original || !/^https?:\/\//.test(original) || !body || typeof body.then !== 'function') return body;
+			return body.then((buffer) => {
+				try {
+					const bytes = new pageWindow.Uint8Array(buffer, 0, 10);
+					const entry = { url: original, width: bytes[6] | (bytes[7] << 8), height: bytes[8] | (bytes[9] << 8) };
+					pendingGifs.push(entry);
+					pipelineStats.gifFetched++;
+					// Unclaimed once the decoder has run, the decode failed or its
+					// canvas has another size. The newest-first match mostly keeps
+					// it from a later GIF meanwhile; this keeps the queue short
+					pageWindow.setTimeout(() => {
+						const at = pendingGifs.indexOf(entry);
+						if (at !== -1) pendingGifs.splice(at, 1);
+					}, 0);
+				} catch (e) { /* too short to be a GIF: the decoder rejects it too */ }
+				return buffer;
+			});
+		};
 	}
 
 	// fetch: the load stage for engines that pull the original with fetch()
@@ -504,22 +611,130 @@ function unrevealImage(img) {
 	}
 }
 
+// --- GIFs: the original laid over the canvas ---
+
+// Revealed GIF canvases -> { overlay: the <img> laid over it, revealObserver:
+// watches the parent's children and the canvas's mark, parent,
+// parentPosition: its inline position to restore }
+const revealedCanvases = new WeakMap();
+
+/**
+ * Lay canvas's original GIF over it, at the same place and size. The canvas
+ * keeps animating its dithered frames underneath; the overlay takes no
+ * pointer events, so leaving the canvas still ends the reveal.
+ * Does nothing for a canvas the hooks did not tag.
+ * Side effects: inserts an <img> after canvas; positions a static parent
+ * inline; observes the parent and canvas's mark until unrevealCanvas.
+ * @param {HTMLCanvasElement} canvas
+ */
+function revealCanvas(canvas) {
+	const originalUrl = canvas.getAttribute(PAGE_HOOK_EVENTS.originalAttr);
+	if (!originalUrl || revealedCanvases.has(canvas) || !canvas.parentNode) return;
+	const parent = canvas.parentNode;
+	// The overlay is placed from the canvas's parent. Left static, the nearest
+	// positioned ancestor can sit outside the chat's scroller, and the overlay
+	// lands a scroll's distance away; positioned, it scrolls with the canvas.
+	// Positioning the parent moves nothing else: in ChatGifMessage it holds
+	// only the canvas, in flow
+	const parentPosition = parent.style.position;
+	// An empty value (no layout engine) counts as static
+	const computedPosition = canvas.ownerDocument.defaultView.getComputedStyle(parent).position;
+	if (!computedPosition || computedPosition === 'static') parent.style.position = 'relative';
+	const overlay = canvas.ownerDocument.createElement('img');
+	overlay.alt = '';
+	overlay.className = 'atmo-revealed atmo-gif-overlay';
+	overlay.style.left = canvas.offsetLeft + 'px';
+	overlay.style.top = canvas.offsetTop + 'px';
+	overlay.style.width = canvas.offsetWidth + 'px';
+	overlay.style.height = canvas.offsetHeight + 'px';
+	// A load that fails after this reveal ended must not end a later one
+	overlay.addEventListener('error', () => {
+		if (revealedCanvases.get(canvas)?.overlay === overlay) unrevealCanvas(canvas);
+	}, { once: true });
+	overlay.src = originalUrl;
+	canvas.after(overlay);
+	// A re-render that removes the canvas sends no mouseout, and one that
+	// plays another GIF on it changes the mark under the pointer; either way
+	// the overlay would show the wrong thing until the next hover
+	const revealObserver = new MutationObserver(() => {
+		if (!canvas.isConnected || canvas.nextSibling !== overlay
+			|| canvas.getAttribute(PAGE_HOOK_EVENTS.originalAttr) !== originalUrl) unrevealCanvas(canvas);
+	});
+	revealObserver.observe(parent, { childList: true });
+	revealObserver.observe(canvas, { attributes: true, attributeFilter: [PAGE_HOOK_EVENTS.originalAttr] });
+	revealedCanvases.set(canvas, { overlay, revealObserver, parent, parentPosition });
+}
+
+/**
+ * Undo revealCanvas.
+ * Side effects: removes the overlay <img>; restores the parent's inline
+ * position; stops observing the parent and canvas's mark.
+ * @param {HTMLCanvasElement} canvas
+ */
+function unrevealCanvas(canvas) {
+	const current = revealedCanvases.get(canvas);
+	if (!current) return;
+	revealedCanvases.delete(canvas);
+	current.revealObserver.disconnect();
+	current.overlay.remove();
+	current.parent.style.position = current.parentPosition;
+}
+
+/**
+ * Reveal an img or a tagged canvas.
+ * Side effects: those of revealImage or revealCanvas.
+ * @param {Element} el
+ */
+function reveal(el) {
+	if (el.tagName === 'IMG') revealImage(el);
+	else revealCanvas(el);
+}
+
+/**
+ * Undo reveal.
+ * Side effects: those of unrevealImage or unrevealCanvas.
+ * @param {Element} el
+ */
+function unreveal(el) {
+	if (el.tagName === 'IMG') unrevealImage(el);
+	else unrevealCanvas(el);
+}
+
+/**
+ * The element an event is about, when it is one undither can reveal: any
+ * img (revealImage skips one with no original), or a canvas the hooks tagged.
+ * @param {Event} e
+ * @returns {Element|null}
+ */
+function revealTarget(e) {
+	const el = e.target;
+	if (!el || !el.tagName) return null;
+	if (el.tagName === 'IMG') return el;
+	if (el.tagName === 'CANVAS' && el.hasAttribute(PAGE_HOOK_EVENTS.originalAttr)) return el;
+	return null;
+}
+
 // --- Hover (mouse and keyboard focus) ---
 
-function onMouseOver(e) {
-	if (featureConfig.unditherImages && e.target && e.target.tagName === 'IMG') revealImage(e.target);
+/**
+ * mouseover and focusin: reveal what the event is about.
+ * Side effects: those of reveal.
+ * @param {Event} e
+ */
+function onRevealStart(e) {
+	const el = featureConfig.unditherImages && revealTarget(e);
+	if (el) reveal(el);
 }
 
-function onMouseOut(e) {
-	if (e.target && e.target.tagName === 'IMG') unrevealImage(e.target);
-}
-
-function onFocusIn(e) {
-	if (featureConfig.unditherImages && e.target && e.target.tagName === 'IMG') revealImage(e.target);
-}
-
-function onFocusOut(e) {
-	if (e.target && e.target.tagName === 'IMG') unrevealImage(e.target);
+/**
+ * mouseout and focusout: end its reveal. Any img or canvas, not only a
+ * marked one: a canvas may have lost its mark while revealed.
+ * Side effects: those of unreveal.
+ * @param {Event} e
+ */
+function onRevealEnd(e) {
+	const el = e.target;
+	if (el && (el.tagName === 'IMG' || el.tagName === 'CANVAS')) unreveal(el);
 }
 
 // --- Touch: press and hold to reveal, release to restore ---
@@ -535,15 +750,15 @@ function getHoldDuration() {
 // populated by the dither hooks (installed at document-start), so there is
 // nothing to build or poll for here.
 function initImageUndither() {
-	document.addEventListener('mouseover', onMouseOver);
-	document.addEventListener('mouseout', onMouseOut);
-	document.addEventListener('focusin', onFocusIn);
-	document.addEventListener('focusout', onFocusOut);
+	document.addEventListener('mouseover', onRevealStart);
+	document.addEventListener('mouseout', onRevealEnd);
+	document.addEventListener('focusin', onRevealStart);
+	document.addEventListener('focusout', onRevealEnd);
 	attachLongPress({
-		findTarget: (e) => (featureConfig.unditherImages && e.target && e.target.tagName === 'IMG' ? e.target : null),
+		findTarget: (e) => (featureConfig.unditherImages ? revealTarget(e) : null),
 		getDuration: getHoldDuration,
-		onHold: revealImage,
-		onRelease: (img, held) => { if (held) unrevealImage(img); },
+		onHold: reveal,
+		onRelease: (el, held) => { if (held) unreveal(el); },
 	});
 }
 
@@ -617,11 +832,13 @@ function diagnoseImageUndither() {
 		const { live, pipelineStats: p, firstStageStats: f, firstStageErrors } = stats;
 		console.log(IMAGE_LOG_PREFIX + ' diagnose: hooks live (drawImage / texImage2D / toBlob / createObjectURL) =',
 			live.drawImage, live.texImage2D, live.toBlob, live.createObjectURL);
-		console.log(IMAGE_LOG_PREFIX + ' diagnose: first-stage probes live (src / fetch) =', live.src, live.fetch);
+		console.log(IMAGE_LOG_PREFIX + ' diagnose: first-stage probes live (src / fetch / gif arrayBuffer) =', live.src, live.fetch, live.gifArrayBuffer);
 		console.log(IMAGE_LOG_PREFIX + ' diagnose: pipeline (drawImage-http / drawImage-blob -> texImage2D-tagged -> toBlob-tagged -> createObjectURL-matched) =',
 			p.drawImageHttp, '/', p.drawImageBlob, '->', p.texImage2DTagged, '->', p.toBlobTagged, '->', p.createObjectURLMatched);
 		console.log(IMAGE_LOG_PREFIX + ' diagnose: pipeline misses (drawImage-other / texImage2D-untagged / toBlob-untagged / createObjectURL-missed / mapped-emit-failed) =',
 			p.drawImageOther, p.texImage2DUntagged, p.toBlobUntagged, p.createObjectURLMissed, p.mappedEmitFailed);
+		console.log(IMAGE_LOG_PREFIX + ' diagnose: gifs (fetched / tagged / canvas draws), marked canvases =',
+			p.gifFetched, '/', p.gifTagged, '/', p.drawImageCanvas, ',', document.querySelectorAll('canvas[' + PAGE_HOOK_EVENTS.originalAttr + ']').length);
 		console.log(IMAGE_LOG_PREFIX + ' diagnose: first stage (src-sets-http / load-ok / load-error, fetch-total / fetch-failed) =',
 			f.srcSetHttp, '/', f.srcLoadOk, '/', f.srcLoadError, ',', f.fetchTotal, '/', f.fetchFailed);
 		console.log(IMAGE_LOG_PREFIX + ' diagnose: recent load failures =',

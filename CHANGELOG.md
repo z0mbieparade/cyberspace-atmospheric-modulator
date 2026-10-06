@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2026-10-06
+
+### Added
+- **GIFs undither too** - hover or hold a GIF in chat and the original, animated, shows over its dithered canvas
+
 ## [0.2.1] - 2026-10-06
 
 ### Added
