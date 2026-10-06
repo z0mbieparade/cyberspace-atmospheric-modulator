@@ -361,8 +361,9 @@ function injectPageHooks(doc) {
 }
 
 // The fallback must patch the realm the site's own code walks. In a sandbox,
-// `window` is the sandbox's window; `unsafeWindow` (@grant unsafeWindow) is the
-// page's. In tests (jsdom) `unsafeWindow` is undefined and `window` is the
+// `window` is the sandbox's window; `unsafeWindow` (@grant unsafeWindow) is
+// the page's in most managers, but the sandbox's own in some (MonkeyScript):
+// see unditherMissesPage. In tests (jsdom) `unsafeWindow` is undefined and `window` is the
 // dom's window, where the stubs live.
 function hookTargetWindow() {
 	return typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
@@ -381,6 +382,8 @@ function onImageMapped(e) {
 	if (typeof url !== 'string' || !/^(https?|blob):/.test(url)) return;
 	recordImageMap(objectUrl, url);
 	logDebug(IMAGE_LOG_PREFIX + ' mapped', url, '->', objectUrl);
+	// The hooks reach the page after all: no warning
+	if (_GM_getValue(UNDITHER_MISSED_KEY, '') === 'true') _GM_setValue(UNDITHER_MISSED_KEY, '');
 }
 
 // Install the hooks: injected into the page first, patched directly as the
@@ -403,6 +406,7 @@ function installDitherHooks() {
 function resetDitherHooks() {
 	ditherHooksInstalled = false;
 	ditherHookRealm = 'none';
+	unditherMissChecked = false;
 }
 
 // Revealed images, holding the srcs and inline size to restore on hide. A
@@ -433,9 +437,10 @@ function lockRenderedSize(img) {
 
 /**
  * Show img's original in place of its dithered blob, at the same size.
- * Does nothing for an img with no mapped original.
+ * For a blob img with no mapped original, checks once per page whether the
+ * hooks miss the page (noteUnditherMiss).
  * Side effects: changes img's src, class, inline size, an error listener, and
- * observes img's src until unrevealImage.
+ * observes img's src until unrevealImage; noteUnditherMiss's side effects.
  * @param {HTMLImageElement} img
  */
 function revealImage(img) {
@@ -450,7 +455,11 @@ function revealImage(img) {
 		unrevealImage(img);
 	}
 	const originalUrl = imageMap.get(blobSrc);
-	if (!originalUrl) return;
+	if (!originalUrl) {
+		// Only a dithered img says anything: an avatar has no original to find
+		if (/^blob:/.test(blobSrc || '')) noteUnditherMiss(img.ownerDocument);
+		return;
+	}
 	// A blob: original may be revoked by the site after we revealed it.
 	// Restore the dithered src if the swap fails to load. The listener is kept
 	// on the reveal record so unrevealImage removes it: a stale once-listener
@@ -539,6 +548,57 @@ function initImageUndither() {
 }
 
 // --- Diagnostics ---
+
+/**
+ * Whether the hooks are missing the site's dithering: dithered images are on
+ * the page, yet the hooks saw nothing drawn. A manager that runs userscripts
+ * in a sandbox apart from the page (MonkeyScript) blocks the injected script,
+ * and its unsafeWindow is the sandbox's, so the fallback patches a realm the
+ * site never uses. An injected script runs as the page, so it never misses.
+ * Side effects: asks the hooks for their counters over an event on doc.
+ * @param {Document} [doc] - the page's document
+ * @param {string} [realm] - where the hooks went, as ditherHookRealm
+ * @returns {boolean} true when the hooks cannot see the site's images
+ */
+function unditherMissesPage(doc = document, realm = ditherHookRealm) {
+	if (realm === 'none' || realm === 'page') return false;
+	if (!doc.querySelector('img[src^="blob:"]')) return false;
+	const stats = readPageHookStats(doc);
+	if (!stats) return true;
+	// Another copy of the hooks may answer in a shape this one cannot judge
+	if (!stats.pipelineStats || typeof stats.pipelineStats !== 'object') return false;
+	// Only drawImage: the site's dithering always starts there, while this
+	// script's own downloads (file-io.js) call createObjectURL too
+	const { drawImageHttp, drawImageBlob, drawImageOther } = stats.pipelineStats;
+	return !drawImageHttp && !drawImageBlob && !drawImageOther;
+}
+
+// The settings tab rarely shows dithered images, so a miss seen where they
+// are is remembered for it. 'true' once a hover found nothing to reveal and
+// the hooks had missed the page; cleared when an image maps
+const UNDITHER_MISSED_KEY = 'unditherMissedPage';
+let unditherMissChecked = false;
+
+/**
+ * Check once per page, on a hover with nothing to reveal, whether the hooks
+ * miss the page, and remember it for the settings tab.
+ * Side effects: may store UNDITHER_MISSED_KEY; asks the hooks for their counters.
+ * @param {Document} doc - the hovered image's document
+ */
+function noteUnditherMiss(doc) {
+	if (unditherMissChecked) return;
+	unditherMissChecked = true;
+	if (unditherMissesPage(doc)) _GM_setValue(UNDITHER_MISSED_KEY, 'true');
+}
+
+/**
+ * Whether to warn that undither cannot work in this manager: the hooks miss
+ * this page, or missed one before.
+ * @returns {boolean}
+ */
+function unditherCannotWork() {
+	return unditherMissesPage() || _GM_getValue(UNDITHER_MISSED_KEY, '') === 'true';
+}
 
 // Report where the hooks went, whether each is still live in the page, how well
 // the map tracks the blob imgs in the DOM, and the per-stage call counts. Run

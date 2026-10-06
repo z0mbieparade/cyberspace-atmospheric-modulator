@@ -29,6 +29,17 @@ function attributionItems() {
 	];
 }
 
+/**
+ * The warning box (warningBoxHtml) as an element, for a custom field.
+ * @param {string} text - shown as text
+ * @returns {Element}
+ */
+function warningBox(text) {
+	const template = document.createElement('template');
+	template.innerHTML = warningBoxHtml(escapeHtml(text));
+	return template.content.firstElementChild;
+}
+
 // This script's section of the site's Settings > AtmoMod tab
 const SETTINGS_SECTION_KEY = 'atmospheric-modulator';
 
@@ -40,6 +51,10 @@ const SETTINGS_SCHEMA = [
 		{ key: 'holdDuration', type: 'slider', label: 'Press-and-hold time on touch screens (ms)',
 			min: 100, max: 2000, step: 50, default: DEFAULT_FEATURE_CONFIG.holdDuration,
 			showWhen: { field: 'unditherImages', is: true } },
+		{ key: 'unditherWarning', type: 'custom', showWhen: { field: 'unditherImages', is: true }, render: () => {
+			if (!unditherCannotWork()) return null;
+			return warningBox('Your userscript manager runs scripts apart from the page, so hovering cannot show original images. It works in Tampermonkey and Greasemonkey.');
+		} },
 	]},
 	{ type: 'section', label: 'Nick colors', fields: [
 		{ key: 'nickColors', type: 'toggle', label: 'Give every username its own color', default: DEFAULT_FEATURE_CONFIG.nickColors },
@@ -49,10 +64,7 @@ const SETTINGS_SCHEMA = [
 		// DEFAULT_FEATURE_CONFIG)
 		{ type: 'custom', render: () => {
 			if (!document.getElementById('nc-styles')) return null;
-			const warning = document.createElement('div');
-			warning.className = uiClass('dialog-warning');
-			warning.textContent = 'The separate Nick Colors userscript is running too. Turn one of them off.';
-			return warning;
+			return warningBox('The separate Nick Colors userscript is running too. Turn one of them off.');
 		} },
 	]},
 	{ type: 'section', label: 'Nick notes', fields: [

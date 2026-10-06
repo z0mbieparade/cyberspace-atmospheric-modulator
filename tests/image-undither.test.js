@@ -623,6 +623,119 @@ describe('page hook bridge', () => {
 		expect(readPageHookStats(w.document).pipelineStats.createObjectURLMatched).toBe(1);
 	});
 
+	describe('unditherMissesPage', () => {
+		// A realm with its own hooks, as MonkeyScript's sandbox would have
+		const sandboxRealm = () => {
+			const w = new JSDOM('<!DOCTYPE html><html><body></body></html>', { runScripts: 'outside-only' }).window;
+			setupCanvasStubs(w);
+			installPageHooks(w, PAGE_HOOK_EVENTS);
+			return w;
+		};
+		const addBlobImg = (w) => {
+			const img = w.document.createElement('img');
+			img.setAttribute('src', 'blob:dithered');
+			w.document.body.appendChild(img);
+		};
+
+		it('is true when dithered images are on the page but the hooks saw nothing drawn', () => {
+			const w = sandboxRealm();
+			addBlobImg(w);
+			expect(unditherMissesPage(w.document, 'unsafeWindow')).toBe(true);
+		});
+
+		it('is true when no hooks answer at all', () => {
+			const w = new JSDOM('<!DOCTYPE html><html><body></body></html>').window;
+			addBlobImg(w);
+			expect(unditherMissesPage(w.document, 'unsafeWindow')).toBe(true);
+		});
+
+		it('is false once the hooks see the site draw an image', () => {
+			const w = sandboxRealm();
+			addBlobImg(w);
+			w.eval(`
+				const img = new Image();
+				img.src = ${JSON.stringify(ORIGINAL_A)};
+				CanvasRenderingContext2D.prototype.drawImage.call({ canvas: document.createElement('canvas') }, img, 0, 0);
+			`);
+			expect(unditherMissesPage(w.document, 'unsafeWindow')).toBe(false);
+		});
+
+		it('is false with no dithered images to judge by', () => {
+			expect(unditherMissesPage(sandboxRealm().document, 'unsafeWindow')).toBe(false);
+		});
+
+		it('is false when the injected script ran, or no hooks went in', () => {
+			const w = sandboxRealm();
+			addBlobImg(w);
+			expect(unditherMissesPage(w.document, 'page')).toBe(false);
+			expect(unditherMissesPage(w.document, 'none')).toBe(false);
+		});
+	});
+
+	describe('a hover with nothing to reveal', () => {
+		afterEach(() => {
+			delete globalThis.unsafeWindow;
+			_GM_setValue('unditherMissedPage', '');
+			// Back to the realm the rest of the file uses
+			resetDitherHooks();
+			installDitherHooks();
+		});
+
+		it('remembers, once per page, that the hooks miss the page', () => {
+			// The fallback lands in a realm the site never draws in
+			const w = new JSDOM('<!DOCTYPE html><html><body></body></html>').window;
+			setupCanvasStubs(w);
+			globalThis.unsafeWindow = w;
+			resetDitherHooks();
+			installDitherHooks();
+
+			const img = w.document.createElement('img');
+			img.setAttribute('src', 'blob:unmapped');
+			w.document.body.appendChild(img);
+			revealImage(img);
+			expect(unditherCannotWork()).toBe(true);
+
+			_GM_setValue('unditherMissedPage', '');
+			revealImage(img);
+			expect(unditherCannotWork(), 'checked once per page').toBe(false);
+		});
+
+		it('waits for a dithered img: hovering an avatar does not use up the check', () => {
+			const w = new JSDOM('<!DOCTYPE html><html><body></body></html>').window;
+			setupCanvasStubs(w);
+			globalThis.unsafeWindow = w;
+			resetDitherHooks();
+			installDitherHooks();
+
+			const avatar = w.document.createElement('img');
+			avatar.setAttribute('src', 'https://cyberspace.online/avatar.png');
+			w.document.body.appendChild(avatar);
+			revealImage(avatar);
+
+			const img = w.document.createElement('img');
+			img.setAttribute('src', 'blob:unmapped');
+			w.document.body.appendChild(img);
+			// This script's own download makes a blob in the same realm
+			w.URL.createObjectURL(new w.Blob(['{}']));
+			revealImage(img);
+			expect(unditherCannotWork()).toBe(true);
+		});
+	});
+
+	describe('unditherCannotWork', () => {
+		afterEach(() => _GM_setValue('unditherMissedPage', ''));
+
+		it('remembers a miss seen on another page, until an image maps', () => {
+			_GM_setValue('unditherMissedPage', 'true');
+			expect(unditherCannotWork()).toBe(true);
+
+			dom.window.document.dispatchEvent(new dom.window.CustomEvent(PAGE_HOOK_EVENTS.mapped, {
+				detail: JSON.stringify(['blob:mapped-now', ORIGINAL_A]),
+			}));
+			expect(unditherCannotWork()).toBe(false);
+		});
+	});
+
 	it('reports injection as not run when the page does not execute it (CSP)', () => {
 		const page = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>');
 		expect(injectPageHooks(page.window.document)).toBe(false);

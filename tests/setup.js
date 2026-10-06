@@ -38,6 +38,9 @@ runAndExpose(code, [
 	// Image undither
 	'PAGE_HOOK_EVENTS',
 	'installPageHooks',
+	'unditherMissesPage',
+	'unditherCannotWork',
+	'_GM_setValue',
 	'injectPageHooks',
 	'readPageHookStats',
 	'installDitherHooks',

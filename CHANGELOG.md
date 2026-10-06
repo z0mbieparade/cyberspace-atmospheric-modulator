@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.0] - 2026-10-05
+## [0.2.1] - 2026-10-06
+
+### Added
+- **Image undither says when it can't work** - in a userscript manager that runs scripts apart from the page, such as MonkeyScript, Settings > AtmoMod shows a warning under Undither images, once a hover finds nothing to show, instead of hover silently doing nothing
+- The script asks to run in the page (`@inject-into auto`), for managers that honor it
 
 ### Fixed
 - **Long styles typed in the Color dialog were cut on load** - icons over 50 characters and CSS values over 200 were dropped from storage. Those limits apply to imports only

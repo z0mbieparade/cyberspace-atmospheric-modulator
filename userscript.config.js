@@ -42,6 +42,13 @@ module.exports = {
 		['connect', 'raw.githubusercontent.com'],
 		['connect', 'api.cyberspace.online'],
 		['run-at', 'document-start'],
+		// Image undither patches the page's own canvas code, so ask to run in
+		// the page, for managers that sandbox scripts apart from it and honor
+		// this (MonkeyScript does not document it). auto, not page: when the
+		// page cannot run it, Violentmonkey still runs the rest of the script.
+		// No @sandbox: Tampermonkey picks its mode from the grants, and that
+		// mode is the one tested
+		['inject-into', 'auto'],
 	],
 	parts: [
 		'script-config.js',

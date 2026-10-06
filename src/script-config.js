@@ -29,6 +29,8 @@ const SETTINGS_SECTION_DESCRIPTION = 'Usability features userscript: undither an
 // Published in users' localStorage: never change it
 const STORAGE_PREFIX = 'atmosphericModulator_';
 const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion',
+	// image-undither
+	'unditherMissedPage',
 	// nick-colors
 	'siteConfig', 'customNickColors',
 	// nick-notes

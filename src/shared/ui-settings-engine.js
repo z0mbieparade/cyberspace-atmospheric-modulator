@@ -466,7 +466,8 @@ function createSettingsEngine(opts) {
 		const result = {};
 		Object.keys(fields).forEach(key => {
 			const fieldState = fields[key];
-			if (fieldState && fieldState.definition.type !== 'button') {
+			// Buttons and custom fields hold no value; a key only lets showWhen find them
+			if (fieldState && !['button', 'custom'].includes(fieldState.definition.type)) {
 				result[key] = fieldState.value;
 			}
 		});
