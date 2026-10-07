@@ -5,6 +5,8 @@
 @use 'nick-colors/styles';
 // Nick notes' hover tooltip
 @use 'nick-notes/styles' as nick-notes;
+// The world clock row in cIRC, and its city checkboxes
+@use 'world-clock/styles' as world-clock;
 
 // A revealed (undithered) image gets a visible edge so the swap registers.
 .atmo-revealed {

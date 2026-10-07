@@ -524,6 +524,7 @@ describe('feature config', () => {
 			holdDuration: 900,
 			nickColors: true,
 			nickNotes: true,
+			worldClock: false,
 		});
 	});
 });

@@ -36,6 +36,8 @@ const DEFAULT_FEATURE_CONFIG = {
 	// change, a saved dialog) recolors them. The settings warn when both run
 	nickColors: true,
 	nickNotes: true,      // personal notes on usernames, shown on hover
+	// City times under cIRC's header, on its page and in the sidebar. Off: it adds to the chat page
+	worldClock: false,
 };
 
 let featureConfig = { ...DEFAULT_FEATURE_CONFIG };

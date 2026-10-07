@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2026-10-07
+
+### Added
+- **World clock** - a row of city times under cIRC's header, on its page and popped out into the sidebar, off by default. Pick from 16 cities, including UTC, or add your own by time zone, in 12- or 24-hour time, with optional UTC offsets that follow daylight saving
+
 ## [0.2.3] - 2026-10-06
 
 ### Added

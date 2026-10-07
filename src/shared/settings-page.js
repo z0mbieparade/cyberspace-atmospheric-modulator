@@ -12,7 +12,8 @@
 // The site re-renders the settings page on navigation, which drops anything
 // added to it, so a MutationObserver puts the tab back.
 //
-// Requires ui-dialog.js (uiClass, warningBoxHtml, attributionHtml) before this
+// Requires ui-dialog.js (uiClass, warningBoxHtml, attributionHtml) and
+// theme-colors.js (initThemeVariables) before this
 // file, and update-check.js (bindVersionLink) in the bundle.
 
 const SETTINGS_PANEL_ID = `${UI_PREFIX}-settings-panel`;
@@ -429,13 +430,19 @@ function syncSettingsPage(active = location.pathname.startsWith('/settings/') &&
 	// The tab content: everything after the tab bars in their container
 	const container = bars[0].parentElement;
 	let panel = document.getElementById(SETTINGS_PANEL_ID);
+	let created = false;
 	if (!panel || panel.parentElement !== container) {
 		panel?.remove();
 		panel = document.createElement('div');
 		panel.id = SETTINGS_PANEL_ID;
 		panel.className = 'mb-6';
 		bars[bars.length - 1].after(panel);
+		created = true;
 	}
+	// Each time the tab is shown: its controls are drawn in the --atmo-*
+	// colors, which nothing else may have published yet (a script with no
+	// menu or dialog open), and the theme may have changed on another tab
+	if (active && (created || panel.hidden)) initThemeVariables();
 	panel.hidden = !active;
 
 	// The notice stays first: the panel is long, and it says where to report

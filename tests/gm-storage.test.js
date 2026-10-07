@@ -82,7 +82,7 @@ describe('GM storage wiring', () => {
 
 			expect(shim.getDebug(), 're-read after hydration').toBe(true);
 			expect(shim.getFeatureConfig(), 're-read after hydration')
-				.toEqual({ unditherImages: false, holdDuration: 250, nickColors: true, nickNotes: true });
+				.toEqual({ unditherImages: false, holdDuration: 250, nickColors: true, nickNotes: true, worldClock: false });
 			expect(store.debugMode, 'migrated from localStorage').toBe('true');
 		});
 
@@ -102,7 +102,7 @@ describe('GM storage wiring', () => {
 			await flushHydration();
 
 			expect(shim.getFeatureConfig(), 're-read ran despite the failed migration')
-				.toEqual({ unditherImages: false, holdDuration: 500, nickColors: true, nickNotes: true });
+				.toEqual({ unditherImages: false, holdDuration: 500, nickColors: true, nickNotes: true, worldClock: false });
 			expect(errors.some(([msg]) => String(msg).includes('migrate'))).toBe(true);
 		});
 	});
@@ -132,7 +132,7 @@ describe('GM storage wiring', () => {
 			});
 
 			expect(store.featureConfig).toBe('{"unditherImages":true}');
-			expect(shim.getFeatureConfig()).toEqual({ unditherImages: true, holdDuration: 500, nickColors: true, nickNotes: true });
+			expect(shim.getFeatureConfig()).toEqual({ unditherImages: true, holdDuration: 500, nickColors: true, nickNotes: true, worldClock: false });
 		});
 	});
 });

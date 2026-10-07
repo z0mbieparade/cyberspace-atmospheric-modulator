@@ -1,0 +1,92 @@
+// The rows of city times under cIRC's header, on its page and in the sidebar. Its colors are inherited
+// from the page: the script's --atmo-* colors are published only when nick
+// colors or a dialog draws, so they could be missing, or left over from
+// another theme, on a row that is always showing
+.atmo-world-clock {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--spacing-xs) var(--spacing-sm);
+	padding: var(--spacing-xs) var(--spacing-sm);
+	font-size: calc(var(--font-size-base, 1rem) * 0.875);
+	// A row of times that turn over: digits of one width keep it still
+	font-variant-numeric: tabular-nums;
+}
+
+// The settings tab's two groups: the city buttons, and the user's own
+// cities under them. Unframed, like the rest of the tab
+.atmo-world-clock-cities,
+.atmo-world-clock-custom {
+	margin: var(--spacing-sm) 0 0;
+	padding: 0;
+	border: 0;
+
+	legend {
+		padding: 0;
+		margin-bottom: var(--spacing-xs);
+	}
+}
+
+// The city buttons wrap in rows
+.atmo-world-clock-cities {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--spacing-xs);
+}
+
+// A city to show or not: outlined, and filled while chosen. The
+// site inverts a hovered, focused or pressed button, from rules of unknown
+// weight, and the panel sizes every button; a city keeps focus after a
+// click, so without these it would look chosen until focus moved
+.atmo-panel .atmo-world-clock-pick {
+	flex: none;
+	padding: 0.25rem 0.5rem;
+	font: inherit;
+	font-size: calc(var(--font-size-base, 1rem) * 0.875);
+	border: 1px solid var(--atmo-fg);
+	border-radius: 0.125rem;
+	cursor: pointer;
+
+	&,
+	&:hover,
+	&:focus,
+	&:active {
+		background: transparent !important;
+		color: var(--atmo-fg) !important;
+	}
+
+	// The panel dims a hovered button's edge, below the 3:1 a control's edge
+	// needs on some themes
+	&:hover {
+		border-color: var(--atmo-fg);
+		text-decoration: underline;
+	}
+
+	&[aria-pressed="true"],
+	&[aria-pressed="true"]:hover,
+	&[aria-pressed="true"]:focus,
+	&[aria-pressed="true"]:active {
+		background: var(--atmo-fg) !important;
+		color: var(--atmo-bg) !important;
+	}
+}
+
+// A name and a time zone on one line, wrapping on a narrow screen; Add and
+// the message under them each take a line of their own
+.atmo-world-clock-add {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--spacing-xs) var(--spacing-sm);
+	margin-top: var(--spacing-xs);
+
+	.hint {
+		flex-basis: 100%;
+	}
+}
+
+// Add on a line of its own under the fields, centered, set apart above
+.atmo-world-clock-add-action {
+	flex-basis: 100%;
+	margin-top: var(--spacing-sm);
+	text-align: center;
+}

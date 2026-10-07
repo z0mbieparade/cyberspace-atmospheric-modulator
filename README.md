@@ -2,7 +2,7 @@
 
 # Cyberspace Atmospheric Modulator
 
-A userscript of usability features for [Cyberspace](https://cyberspace.online) and [Cyberspace Beta](https://beta.cyberspace.online): see the original un-dithered images, give every username its own hashed color, and keep personal notes.
+A userscript of usability features for [Cyberspace](https://cyberspace.online) and [Cyberspace Beta](https://beta.cyberspace.online): see the original un-dithered images, give every username its own hashed color, keep personal notes, and see world times in cIRC.
 
 ## Install
 
@@ -19,6 +19,7 @@ Coming from the Nick Colors userscript? Check the wiki to see how to move your s
 | Image undither | Hover, focus or press and hold a dithered image to see the original | On |
 | Nick colors | Gives every username its own color, the [Nick Colors](https://github.com/z0mbieparade/cyberspace-nick-colors) userscript built in | On |
 | Nick notes | Personal notes on a username, shown when you hover it | On |
+| World clock | City times under cIRC's header, on its page and in the sidebar, in 12- or 24-hour time, with optional UTC offsets | Off |
 | User menu | Right-click a username: Color, Notes, Poke, Profile | — |
 
 Settings are in the site's **Settings > AtmoMod** tab. Access them via **Settings** page or via the little modulator icon under the globe in the sidebar.

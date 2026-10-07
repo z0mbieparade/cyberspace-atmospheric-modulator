@@ -25,7 +25,7 @@ const SETTINGS_TAB_HASH = 'atmomod';
 const SETTINGS_TITLE = 'Atmospheric Modulator Settings';
 // The settings tab's last section (backup.js); nick colors' help points to it
 const BACKUP_SECTION_TITLE = 'Backup & Troubleshooting';
-const SETTINGS_SECTION_DESCRIPTION = 'Usability features userscript: undither an image, give nicknames a hashed color, and keep notes on them. Changes save as you make them.';
+const SETTINGS_SECTION_DESCRIPTION = 'Usability features userscript: undither an image, give nicknames a hashed color, keep notes on them, and show world times in cIRC. Changes save as you make them.';
 // Published in users' localStorage: never change it
 const STORAGE_PREFIX = 'atmosphericModulator_';
 const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion', 'settingsSectionsOpen',
@@ -34,4 +34,6 @@ const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion',
 	// nick-colors
 	'siteConfig', 'customNickColors', 'nickFriends',
 	// nick-notes
-	'nickNotes'];
+	'nickNotes',
+	// world-clock
+	'worldClock'];

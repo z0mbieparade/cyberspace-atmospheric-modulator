@@ -12,11 +12,6 @@ const PENCIL_ICON_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="c
 	+ '<rect x="9" y="7" width="2" height="2"/><rect x="3" y="9" width="2" height="2"/><rect x="7" y="9" width="2" height="2"/>'
 	+ '<rect x="1" y="11" width="2" height="4"/><rect x="3" y="13" width="2" height="2"/><rect x="5" y="11" width="2" height="2"/></svg>';
 
-// A pixel trash can, in the text color. Decorative: the button is named
-const TRASH_ICON_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true" focusable="false">'
-	+ '<rect x="5" y="1" width="6" height="2"/><rect x="2" y="3" width="12" height="2"/><rect x="3" y="6" width="2" height="8"/>'
-	+ '<rect x="11" y="6" width="2" height="8"/><rect x="3" y="13" width="10" height="2"/><rect x="7" y="7" width="2" height="5"/></svg>';
-
 /**
  * The key a user's notes are stored under, whatever the case of username:
  * a row's spelling can come from another feature's data, saved under other
@@ -61,25 +56,6 @@ function notesListParts(username) {
 	const trash = iconButton(TRASH_ICON_SVG, `Delete notes on @${key}`, () => confirmDeleteNotes(key), 'danger');
 	trash.dataset.entryControl = 'trash';
 	return [userListColumn(text, 'text'), userListColumn(edit, 'edit'), userListColumn(trash, 'delete')];
-}
-
-/**
- * A button that is only an icon, named and titled by label.
- * @param {string} svg - the icon, decorative (aria-hidden)
- * @param {string} label
- * @param {Function} onClick
- * @param {'danger'} [tone] - danger: the error color on hover, for a delete
- * @returns {HTMLButtonElement}
- */
-function iconButton(svg, label, onClick, tone) {
-	const button = document.createElement('button');
-	button.type = 'button';
-	button.className = tone ? uiClass('icon-btn', tone) : uiClass('icon-btn');
-	button.title = label;
-	button.setAttribute('aria-label', label);
-	button.innerHTML = svg;
-	button.addEventListener('click', onClick);
-	return button;
 }
 
 /**

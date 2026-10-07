@@ -71,6 +71,10 @@ const SETTINGS_SCHEMA = [
 		{ key: 'nickNotes', type: 'toggle', label: 'Keep personal notes on users, shown on hover', default: DEFAULT_FEATURE_CONFIG.nickNotes },
 		{ type: 'hint', text: 'Right-click or long-press a name and choose Notes. Turning it off hides Notes from the menu at once; notes on hover stay until the page reloads.' },
 	]},
+	{ type: 'section', label: 'World clock', fields: [
+		{ key: 'worldClock', type: 'toggle', label: 'Show city times under cIRC\'s header', default: DEFAULT_FEATURE_CONFIG.worldClock },
+		{ type: 'hint', text: 'Show a list of cities and times under the cIRC header in 12- or 24-hour time. See World Clock settings below.' },
+	]},
 ];
 
 /**

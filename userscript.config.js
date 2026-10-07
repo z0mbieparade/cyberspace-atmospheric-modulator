@@ -93,6 +93,10 @@ module.exports = {
 			'nick-notes/notes-settings.js',
 			'nick-notes/init.js',
 		] },
+		{ scope: 'world-clock', parts: [
+			'world-clock/world-clock.js',
+			'world-clock/init.js',
+		] },
 		'settings-panel.js',
 		'backup.js',
 		'init.js',

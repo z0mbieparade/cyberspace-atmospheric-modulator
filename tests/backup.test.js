@@ -28,7 +28,7 @@ describe('exportBackup and importBackup', () => {
 		const file = {
 			app: 'cyberspace-atmospheric-modulator',
 			version: 1,
-			featureConfig: { unditherImages: false, holdDuration: 900, nickColors: true, nickNotes: true },
+			featureConfig: { unditherImages: false, holdDuration: 900, nickColors: true, nickNotes: true, worldClock: false },
 			features: { nickColors: { cnc: { alice: { c: '#ff0000' } } } },
 		};
 		const result = importBackup(JSON.parse(JSON.stringify(file)));
@@ -101,7 +101,7 @@ describe('exportBackup and importBackup', () => {
 			version: 1,
 			featureConfig: { unditherImages: 'no', holdDuration: 700, somethingNew: true },
 		});
-		expect(JSON.parse(stored('featureConfig'))).toEqual({ unditherImages: true, holdDuration: 700, nickColors: true, nickNotes: true });
+		expect(JSON.parse(stored('featureConfig'))).toEqual({ unditherImages: true, holdDuration: 700, nickColors: true, nickNotes: true, worldClock: false });
 	});
 
 	it('leaves names uncolored when nick colors has not started', () => {

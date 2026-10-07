@@ -47,7 +47,7 @@ describe('openSettingsPanel', () => {
 		field('debugMode').click();
 		clickButton('save');
 
-		expect(JSON.parse(stored('featureConfig'))).toEqual({ unditherImages: false, holdDuration: 800, nickColors: true, nickNotes: true });
+		expect(JSON.parse(stored('featureConfig'))).toEqual({ unditherImages: false, holdDuration: 800, nickColors: true, nickNotes: true, worldClock: false });
 		expect(stored('debugMode')).toBe('true');
 		expect(doc.querySelector('.atmo-dialog-overlay')).toBeNull();
 	});

@@ -30,6 +30,8 @@ function loadScript(name = 'script') {
 		const _GM_setValue = (key, value) => { (window.__gmStore = window.__gmStore || {})[key] = value; };
 		const isGMStorageReady = () => window.__gmReady !== false;
 		const whenGMStorageReady = (callback) => { (window.__gmReadyCallbacks = window.__gmReadyCallbacks || []).push(callback); };
+		// theme-colors.js's: counts how often the colors were published
+		function initThemeVariables() { window.__themePublished = (window.__themePublished || 0) + 1; }
 		${SOURCE}
 		return { registerSettingsSection, refreshSettingsSection, configureSettingsTab, openSettingsSection, settingsTabUrl, syncSettingsPage };
 	})()`);
@@ -159,6 +161,24 @@ describe('the Userscripts tab', () => {
 		expect(mutations).toBe(0);
 		expect(ourTab(desktopBar()).textContent).toBe('AtmoMod');
 		expect(ourTab(desktopBar()).getAttribute('aria-label')).toBe('AtmoMod, T');
+	});
+
+	it('publishes the theme colors each time it is shown, and not on every sync', async () => {
+		const script = loadScript();
+		script.registerSettingsSection({ key: 'a', title: 'A', render: () => {} });
+		expect(window.__themePublished ?? 0).toBe(0);
+		await openTab();
+		expect(window.__themePublished).toBe(1);
+		script.syncSettingsPage();
+		expect(window.__themePublished).toBe(1);
+
+		// Away to another tab, where the theme may change, and back
+		siteTab(desktopBar(), 'account').click();
+		window.history.pushState(null, '', '/settings/account');
+		script.syncSettingsPage();
+		expect(panel().hidden).toBe(true);
+		await openTab();
+		expect(window.__themePublished).toBe(2);
 	});
 
 	it('opens in place of the tab content and takes the active look', async () => {
