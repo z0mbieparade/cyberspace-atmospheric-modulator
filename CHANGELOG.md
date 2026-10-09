@@ -2,12 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+Each version starts with a one-line summary, a `>` line under its heading. The update banner shows it to users of older versions as plain text, not markdown: keep it to one line of at most 160 characters, written for them, without `**` or links. A longer one is cut.
+
+## [0.2.5] - 2026-10-08
+
+> Added: Save your settings to a private Cyberspace note + CHANGELOG section. Fixed: World Clock settings not saving in Tampermonkey.
+
+### Added
+- **Settings in a Cyberspace note** - Save to Note keeps every setting in one private note on Cyberspace, and Load from Note brings them back on any browser signed in as you. Encrypt note with passphrase locks it, and this browser keeps the key, never the passphrase; with it off, a warning says anyone who sees the note can read your notes on other users. Erase All Settings makes this browser forget the note and its key
+
+### Changed
+- **The update banner says what is new** - under the version, a line for each of up to three versions since yours. A Changelog section at the bottom of the settings tab lists every version the same way, for after the banner is dismissed, with a dot on its heading while an update is out
+- **Backup buttons in pairs** - Backup & Troubleshooting groups them as the clipboard, a settings file, and a Cyberspace note, each saving and loading
+
+### Fixed
+- **World clock settings were lost on reload in Tampermonkey** - cities, your own cities, 12- or 24-hour time and offsets went back to the defaults on every page. They are read as the script loads
+
 ## [0.2.4] - 2026-10-07
+
+> Added: A world clock under cIRC's header. Enable it in settings, then pick cities, or add your own, in the WORLD CLOCK section.
 
 ### Added
 - **World clock** - a row of city times under cIRC's header, on its page and popped out into the sidebar, off by default. Pick from 16 cities, including UTC, or add your own by time zone, in 12- or 24-hour time, with optional UTC offsets that follow daylight saving
 
 ## [0.2.3] - 2026-10-06
+
+> Added: CHOOMS section listing users you've starred, noted or colored. Settings sections fold. Fixed: prepend icon also adding an append icon.
 
 ### Added
 - **Settings sections fold** - each section of Settings > AtmoMod folds under its title and stays the way you left it; the buttons that lead to one open it
@@ -25,6 +45,8 @@ All notable changes to this project will be documented in this file.
 
 ## [0.2.2] - 2026-10-06
 
+> Added: Only color my chooms/friends; everyone else stays uncolored while it's on. Undither works on GIFs.
+
 ### Added
 - **GIFs undither too** - hover or hold a GIF in chat and the original, animated, shows over its dithered canvas
 - **Only color my friends** - a Nick Colors switch, off by default, that colors only the people you add. Their menu gets **Add Color**, or **Edit Color** and **Remove Color**; the settings show them as a wrapped list, each with an × to remove it. Everyone else keeps the site's colors. Turned on with an empty list, it adds you first
@@ -34,6 +56,8 @@ All notable changes to this project will be documented in this file.
 - **Turning nick colors off left names colored until a reload** - names lose their colors at once, and get them back when it is turned on
 
 ## [0.2.1] - 2026-10-06
+
+> Added: a warning when your userscript extension can't run undither. Changed: unsafe CSS is removed from saved and imported nick styles.
 
 ### Added
 - **Image undither says when it can't work** - in a userscript manager that runs scripts apart from the page, such as MonkeyScript, Settings > AtmoMod shows a warning under Undither images, once a hover finds nothing to show, instead of hover silently doing nothing
@@ -48,6 +72,8 @@ All notable changes to this project will be documented in this file.
 - Usernames that are built-in object properties, such as `__proto__` or `toString`, are ignored
 
 ## [0.2.0] - 2026-10-05
+
+> First release of AtmoMod: image undither, nick colors and nick notes, a user menu and a settings tab. The Nick Colors userscript is merged in and deprecated.
 
 The first release of Cyberspace Atmospheric Modulator: usability features for Cyberspace as one userscript, with the Nick Colors userscript built in.
 
@@ -81,6 +107,8 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 
 ## [1.3.4] - 2026-09-02
 
+> Added: Shows a banner when an update is out.
+
 ### Added
 - **Update banner** - a newer release now slides down a banner from the top of the page instead of only tinting the version number in a dialog footer nobody opens. `UPDATE` opens the new version to install, `LATER` hides it until the next page load, `x` hides it until something newer than that version ships
 - Section 7 of `tests/visual-test.html` shows the banner on demand, so it can be checked against every preset theme's warn colors
@@ -95,6 +123,8 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 - The script's own download URL is built once in `getScriptURL()` rather than assembled from `GM_info` in two places
 
 ## [1.3.3] - 2026-09-02
+
+> Fixed: Issues with userscript extensions not all loading settings correctly. Changed: moved debug logs behind a debug toggle switch.
 
 ### Added
 - Tests for the GM storage shim covering sync `GM_*`, async `GM.*`, async `GM_*`, the no-manager localStorage fallback, and a `GM_getValue` that throws
@@ -111,12 +141,16 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 
 ## [1.3.2]
 
+> Added: exclusions for page and terminal subdomains.
+
 ### Added
 - **Host exclusion list** - `HOST_EXCLUDE` skips whole subdomains, matching the host and any of its subdomains; `page.cyberspace.online` and `terminal.cyberspace.online` are excluded
 - `/pages` added to `PATH_EXCLUDE`
 - Excluded hosts and paths now live in `src/exclusions.json`, the single source for both the userscript `@exclude` header lines (generated at build time) and the `HOST_EXCLUDE`/`PATH_EXCLUDE` constants in the bundle
 
 ## [1.3.1] - 2026-08-08
+
+> Added: exclusions for /terminal and /terminal/x pages.
 
 ### Added
 - **Page exclusion list** - `PATH_EXCLUDE` skips coloring entirely on pages that render their own content; `/terminal` (the canvas terminal emulator) is the first entry
@@ -131,6 +165,8 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 
 ## [1.3.0] - 2026-02-10
 
+> Added: include beta.cyberspace.online in userscript.
+
 ### Added
 - **Beta site support** - Script now works on beta.cyberspace.online in addition to the main site
 - Added selector for beta site's username spans (`span.cursor-pointer.hover:underline`)
@@ -144,6 +180,8 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 
 ## [1.2.4] - 2026-01-14
 
+> Added: version in dialog footer highlights on update available. Greasemonkey 4 support.
+
 ### Added
 - **Update indicator** - Version in dialog footer highlights when update available; click to install
 - **Greasemonkey 4+ support** - Added `GM.xmlHttpRequest` compatibility for newer Greasemonkey versions
@@ -152,6 +190,8 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 - Added `github.com` to `@connect` list for overrides.json fetch (was causing "not part of @connect list" error)
 
 ## [1.2.2] - 2026-01-13
+
+> Added: Turn a custom font on, off, or back to auto, which follows the site-wide style.
 
 ### Added
 - **Font family tristate toggle** - Custom font now has auto/off/on states like other style variations (auto inherits from remote overrides)
@@ -162,10 +202,14 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 
 ## [1.2.1] - 2026-01-13
 
+> Fixed: editor crashing when typing @name.
+
 ### Fixed
 - Bug where editor crashes if @username is typed
 
 ## [1.2.0] - 2026-01-13
+
+> Added: keep private notes on users, per-user fonts, open on long press.
 
 ### Added
 - **User notes** - Add personal notes about users that display on hover (300ms delay)
@@ -177,6 +221,8 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 - Dialog close behavior - Dialogs no longer close when dragging sliders outside the dialog
 
 ## [1.1.0] - 2025-12-15
+
+> Changed: measures contrast the WCAG way. Added: help dialog and tests.
 
 ### Added
 - **Settings engine** - Unified schema-based settings system for all dialogs
@@ -196,6 +242,8 @@ Before 0.2.0 this project was the standalone Nick Colors userscript. Its history
 - Import/export v1 to v1.1 migration
 
 ## [1.0.0] - 2025-12-12
+
+> Nick Colors first release: every username gets a hashed color.
 
 ### Added
 - **Hash-based coloring** - Consistent colors for usernames based on hash

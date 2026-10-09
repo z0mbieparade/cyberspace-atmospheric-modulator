@@ -15,6 +15,10 @@
 //                      unlisted one would bring the banner back after x
 //   @grant GM_xmlhttpRequest and GM.xmlHttpRequest, and @connect for the
 //                      update URL's host; without them the check uses fetch
+// Optional, from the script:
+//   CHANGELOG_URL      the raw CHANGELOG.md: the banner shows each newer
+//                      version's one-line summary, a "> " line under its
+//                      "## [x.y.z]" heading
 // From the build: VERSION, and SCRIPT_URL from the header's @downloadURL.
 // From the shared files: gm-storage.js and ui-dialog.js before this one, and
 // theme-colors.js anywhere (the banner's colors).
@@ -136,11 +140,95 @@ function checkForUpdates() {
 	return updateCheck;
 }
 
+// Summaries the banner shows; more get a line saying how many more
+const UPDATE_SUMMARIES_SHOWN = 3;
+// Each summary is one line: a longer one is cut
+const UPDATE_SUMMARY_MAX_LENGTH = 160;
+// The changelog is extra: a slow one must not hold the banner back, and a
+// request that never answers (fetchText has no timeout) must not hide it
+const UPDATE_CHANGELOG_TIMEOUT_MS = 5000;
+
+/**
+ * The one-line summaries a changelog gives each version after `since`, up
+ * to and including `upTo`: the "> " line under a "## [x.y.z]" heading.
+ * @param {string} text - CHANGELOG.md
+ * @param {string|null} [since] - the installed version; null for every
+ *   version from the first
+ * @param {string|null} [upTo] - the published version; null for no limit
+ * @returns {{version: string, summary: string}[]} newest first; a version
+ *   without a summary line, or not numbered (Unreleased), is left out. The
+ *   list ends at a heading newer than the one before it: a changelog lists
+ *   newest first, so that starts an older project's history, whose version
+ *   numbers are not this script's (Nick Colors 1.x under its 0.x)
+ */
+function changelogSummaries(text, since = null, upTo = null) {
+	const summaries = [];
+	let previous = null;
+	for (const [, version, summary] of String(text).replace(/\r\n?/g, '\n').matchAll(/^## \[([^\]\n]+)\][^\n]*\n+(?:> ?([^\n]+))?/gm)) {
+		if (!/^\d+(\.\d+)*$/.test(version)) continue;
+		if (previous && isNewerVersion(version, previous)) break;
+		previous = version;
+		if (!summary?.trim()) continue;
+		if ((since && !isNewerVersion(version, since)) || (upTo && isNewerVersion(version, upTo))) continue;
+		const line = summary.trim();
+		summaries.push({ version, summary: line.length > UPDATE_SUMMARY_MAX_LENGTH ? line.slice(0, UPDATE_SUMMARY_MAX_LENGTH - 1) + '…' : line });
+	}
+	return summaries.sort((a, b) => compareVersions(b.version, a.version));
+}
+
+// The one changelog fetch per page load, shared by the banner and anything
+// else that lists versions
+let changelogFetch = null;
+
+/**
+ * Every version's summary from CHANGELOG_URL, once per page load; later
+ * calls get the same result.
+ * @returns {Promise<{version: string, summary: string}[]|null>} newest
+ *   first; null without CHANGELOG_URL, or when it cannot be had in time.
+ *   Never rejects
+ */
+function fetchChangelogSummaries() {
+	if (typeof CHANGELOG_URL === 'undefined' || !CHANGELOG_URL) return Promise.resolve(null);
+	if (!changelogFetch) {
+		const timeout = new Promise(resolve => setTimeout(() => resolve(null), UPDATE_CHANGELOG_TIMEOUT_MS));
+		changelogFetch = Promise.race([fetchText(CHANGELOG_URL), timeout])
+			.then(text => (text ? changelogSummaries(text) : null))
+			.catch(e => {
+				logDebug(LOG_PREFIX + ' Changelog failed:', e);
+				return null;
+			});
+	}
+	return changelogFetch;
+}
+
+/**
+ * What each version since this one brings, up to the published one.
+ * @param {string} newVersion - the published version
+ * @returns {Promise<{version: string, summary: string}[]>} newest first;
+ *   empty without the changelog. Never rejects
+ */
+function fetchUpdateSummaries(newVersion) {
+	return fetchChangelogSummaries().then(all => (all || [])
+		.filter(({ version }) => isNewerVersion(version, VERSION) && !isNewerVersion(version, newVersion)));
+}
+
 // Banners from every script go in one container, so two updates stack
 // instead of covering each other
 const UPDATE_BANNERS_ID = `${UI_PREFIX}-update-banners`;
 // Per script, so one script's banner never stands in for another's
 const UPDATE_BANNER_ID = `${UI_ID_NAMESPACE}-update-banner`;
+
+/**
+ * Whether the banner would show for a version: newer than this one, newer
+ * than any dismissed, and not showing already.
+ * @param {string|false|null} newVersion
+ * @returns {boolean}
+ */
+function updateBannerWanted(newVersion) {
+	return !!newVersion && isNewerVersion(newVersion, VERSION)
+		&& isNewerVersion(newVersion, getDismissedUpdateVersion())
+		&& !document.getElementById(UPDATE_BANNER_ID);
+}
 
 /**
  * Show the update banner for a newer version.
@@ -151,13 +239,13 @@ const UPDATE_BANNER_ID = `${UI_ID_NAMESPACE}-update-banner`;
  * Side effects: sets the --atmo-* theme variables, and adds the banner (and the
  * shared container) to document.body.
  * @param {string} newVersion - the published version
+ * @param {{version: string, summary: string}[]} [summaries] - what each
+ *   newer version brings, newest first (fetchUpdateSummaries)
  * @returns {HTMLElement|null} the banner, or null when it is not newer, was
  *   dismissed, or is already showing
  */
-function showUpdateBanner(newVersion) {
-	if (!newVersion || !isNewerVersion(newVersion, VERSION)) return null;
-	if (!isNewerVersion(newVersion, getDismissedUpdateVersion())) return null;
-	if (document.getElementById(UPDATE_BANNER_ID)) return null;
+function showUpdateBanner(newVersion, summaries = []) {
+	if (!updateBannerWanted(newVersion)) return null;
 
 	// The banner is drawn in the --atmo-warn colors, which may not be set yet:
 	// a script may show it before opening any dialog
@@ -177,9 +265,10 @@ function showUpdateBanner(newVersion) {
 	banner.setAttribute('role', 'status');
 	banner.innerHTML = `
 		<span class="${uiClass('update-banner-icon')}" aria-hidden="true">▲</span>
-		<span class="${uiClass('update-banner-text')}">
+		<div class="${uiClass('update-banner-text')}">
 			<strong>${SCRIPT_NAME} v${escapeHtml(newVersion)}</strong> is available &mdash; you're on v${VERSION}
-		</span>
+			${updateSummariesHtml(summaries)}
+		</div>
 		<span class="${uiClass('update-banner-actions')}">
 			<button type="button" class="${uiClass('update-banner-update')} link-brackets" title="Open the new version to install it"><span class="inner">UPDATE</span></button>
 			<button type="button" class="${uiClass('update-banner-later')} link-brackets" title="Hide until the next page load"><span class="inner">LATER</span></button>
@@ -214,12 +303,29 @@ function showUpdateBanner(newVersion) {
 }
 
 /**
- * Check for an update and show the banner if there is one. Call once at boot.
+ * The banner's list of what each newer version brings.
+ * @param {{version: string, summary: string}[]} summaries - newest first
+ * @returns {string} HTML; '' for none. The summaries come from the network,
+ *   so they are escaped
+ */
+function updateSummariesHtml(summaries) {
+	if (!summaries.length) return '';
+	const shown = summaries.slice(0, UPDATE_SUMMARIES_SHOWN).map(({ version, summary }) =>
+		`<li>v${escapeHtml(version)}: ${escapeHtml(summary)}</li>`);
+	const more = summaries.length - UPDATE_SUMMARIES_SHOWN;
+	if (more > 0) shown.push(`<li>and ${more} more ${more === 1 ? 'update' : 'updates'}</li>`);
+	return `<ul class="${uiClass('update-banner-news')}">${shown.join('')}</ul>`;
+}
+
+/**
+ * Check for an update and show the banner if there is one, with what each
+ * newer version brings. Call once at boot.
  * @returns {Promise<void>}
  */
 function startUpdateCheck() {
-	return checkForUpdates().then(() => {
-		if (UPDATE_AVAILABLE) showUpdateBanner(UPDATE_AVAILABLE);
+	return checkForUpdates().then(async () => {
+		// Not for a dismissed version: its changelog would be fetched for nothing
+		if (updateBannerWanted(UPDATE_AVAILABLE)) showUpdateBanner(UPDATE_AVAILABLE, await fetchUpdateSummaries(UPDATE_AVAILABLE));
 	});
 }
 

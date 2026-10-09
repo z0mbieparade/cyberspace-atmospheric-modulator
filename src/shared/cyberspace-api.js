@@ -25,6 +25,21 @@ const API_TIMEOUT_MS = 15 * 1000;
 class ApiUncertainError extends Error {}
 
 /**
+ * A request Cyberspace answered with a refusal. status says which, for a
+ * caller that acts on one (404: it is gone; 429: too many).
+ */
+class ApiRefusedError extends Error {
+	/**
+	 * @param {string} message - for the user
+	 * @param {number} status - the HTTP status
+	 */
+	constructor(message, status) {
+		super(message);
+		this.status = status;
+	}
+}
+
+/**
  * The signed-in user's ID token, from the site's Firebase sign-in.
  * @returns {Promise<string|null>} null when signed out, expired, or unreadable
  */
@@ -70,18 +85,33 @@ function readSessionToken() {
 }
 
 /**
- * Call the API as the signed-in user.
- * Side effects: a network request to API_BASE_URL, acting as the user.
+ * Call the API as the signed-in user, for the response's data.
+ * Side effects: as apiResponse.
  * @param {string} method
  * @param {string} path - after /v1, e.g. '/cmail'
  * @param {Object} [body] - sent as JSON
  * @returns {Promise<*>} the response's data
- * @throws {ApiUncertainError} when the connection failed or timed out: the
- *   server may have acted on it
- * @throws {Error} when signed out, or the server refused it; the message is
- *   for the user
+ * @throws {ApiUncertainError|ApiRefusedError|Error} as apiResponse
  */
 async function apiRequest(method, path, body) {
+	return (await apiResponse(method, path, body))?.data;
+}
+
+/**
+ * Call the API as the signed-in user, for the whole response: a list's
+ * cursor is beside its data.
+ * Side effects: a network request to API_BASE_URL, acting as the user.
+ * @param {string} method
+ * @param {string} path - after /v1, e.g. '/cmail'
+ * @param {Object} [body] - sent as JSON
+ * @returns {Promise<Object|null>} the parsed response, { data, cursor? }
+ * @throws {ApiUncertainError} when the connection failed or timed out: the
+ *   server may have acted on it
+ * @throws {ApiRefusedError} when the server refused it; the message is for
+ *   the user
+ * @throws {Error} when signed out
+ */
+async function apiResponse(method, path, body) {
 	const token = await readSessionToken();
 	if (!token) throw new Error('Not signed in to Cyberspace.');
 	const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
@@ -120,9 +150,9 @@ async function apiRequest(method, path, body) {
 	} catch (e) { /* not JSON: the status says enough */ }
 	if (response.status < 200 || response.status >= 300) {
 		const reason = json?.error?.message || json?.message || `error ${response.status}`;
-		throw new Error(`Cyberspace refused it: ${reason}`);
+		throw new ApiRefusedError(`Cyberspace refused it: ${reason}`, response.status);
 	}
-	return json?.data;
+	return json;
 }
 
 /**
@@ -169,4 +199,81 @@ async function sendCmail(username, content) {
 	}
 	if (!conversation?.conversationId) throw new Error('Cyberspace did not open the conversation.');
 	await apiRequest('POST', `/cmail/${encodeURIComponent(conversation.conversationId)}`, { content });
+}
+
+// Your private notes (/v1/notes): only you can read them, though the site
+// can publish one to your journal. Cyberspace allows 3 saves a minute and
+// 30 a day, a new note or a change to one
+
+/**
+ * One page of the signed-in user's notes, latest revision of each.
+ * @param {string|null} [cursor] - from the previous page
+ * @returns {Promise<{notes: Object[], cursor: string|null}>} cursor: null on
+ *   the last page
+ * @throws {ApiUncertainError|ApiRefusedError|Error} as apiRequest
+ */
+async function listNotes(cursor = null) {
+	const query = cursor ? `?limit=50&cursor=${encodeURIComponent(cursor)}` : '?limit=50';
+	const page = await apiResponse('GET', '/notes' + query);
+	return { notes: Array.isArray(page?.data) ? page.data : [], cursor: page?.cursor ?? null };
+}
+
+/**
+ * A note's ID, as a list or a save returns the note. The API docs show no
+ * note object, so every name it could have is read: noteId, as the docs'
+ * other objects are named (postId, conversationId); postId, since a note
+ * is an unpublished entry; and a plain id.
+ * @param {Object} note
+ * @returns {string|null}
+ */
+function noteId(note) {
+	const id = note?.noteId ?? note?.postId ?? note?.id;
+	return typeof id === 'string' && id ? id : null;
+}
+
+/**
+ * One of the signed-in user's notes, latest revision.
+ * @param {string} id
+ * @returns {Promise<Object>}
+ * @throws {ApiRefusedError} status 404 when it is gone; else as apiRequest
+ */
+async function getNote(id) {
+	return apiRequest('GET', `/notes/${encodeURIComponent(id)}`);
+}
+
+/**
+ * Save a new private note.
+ * Side effects: creates the note on Cyberspace.
+ * @param {string} content - at most 32,768 characters
+ * @param {string[]} topics - at most 3, lowercase
+ * @returns {Promise<Object>} the note
+ * @throws {ApiUncertainError|ApiRefusedError|Error} as apiRequest
+ */
+async function createNote(content, topics) {
+	return apiRequest('POST', '/notes', { content, topics });
+}
+
+/**
+ * Change a note: Cyberspace keeps the earlier text as a revision.
+ * Side effects: adds a revision to the note on Cyberspace.
+ * @param {string} id
+ * @param {string} content - at most 32,768 characters
+ * @param {string[]} topics - at most 3, lowercase
+ * @returns {Promise<Object>} the note
+ * @throws {ApiRefusedError} status 404 when it is gone; else as apiRequest
+ */
+async function updateNote(id, content, topics) {
+	return apiRequest('PATCH', `/notes/${encodeURIComponent(id)}`, { content, topics });
+}
+
+/**
+ * Delete a note, every revision of it.
+ * Side effects: deletes the note on Cyberspace.
+ * @param {string} id
+ * @returns {Promise<void>}
+ * @throws {ApiRefusedError} status 404 when it is gone already; else as
+ *   apiRequest
+ */
+async function deleteNote(id) {
+	await apiRequest('DELETE', `/notes/${encodeURIComponent(id)}`);
 }

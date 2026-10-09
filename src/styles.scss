@@ -8,6 +8,16 @@
 // The world clock row in cIRC, and its city checkboxes
 @use 'world-clock/styles' as world-clock;
 
+// The Changelog section's list of versions (changelog-section.js)
+.atmo-changelog {
+	margin: var(--spacing-xs) 0;
+	padding-left: 1.25em;
+
+	li {
+		margin-bottom: var(--spacing-xs);
+	}
+}
+
 // A revealed (undithered) image gets a visible edge so the swap registers.
 .atmo-revealed {
 	outline: 1px solid var(--color-border, #666);

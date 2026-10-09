@@ -43,7 +43,7 @@ describe('the sidebar link', () => {
 
 		expect(link().title).toBe(SETTINGS_TAB_TITLE);
 		// The version shows with the label, while the sidebar is open
-		expect(link().querySelector('.atmo-sidebar-link-label').textContent).toBe(`${SETTINGS_TAB_LABEL} v0.2.4`);
+		expect(link().querySelector('.atmo-sidebar-link-label').textContent).toBe(`${SETTINGS_TAB_LABEL} v0.2.5`);
 		// Both texts a speech user may see, open and collapsed, are in the name
 		expect(link().getAttribute('aria-label')).toContain(link().querySelector('.atmo-sidebar-link-label').textContent);
 		expect(link().getAttribute('aria-label')).toContain(link().title);

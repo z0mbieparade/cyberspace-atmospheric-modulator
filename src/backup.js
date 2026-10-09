@@ -11,7 +11,8 @@
 const BACKUP_APP = 'cyberspace-atmospheric-modulator';
 const BACKUP_VERSION = 1;
 
-// This script's last section of the site's Settings > AtmoMod tab
+// This script's section for the whole script on the site's Settings >
+// AtmoMod tab, after its settings sections and before the Changelog
 const BACKUP_SECTION_KEY = 'atmospheric-modulator-backup';
 
 /**
@@ -71,6 +72,8 @@ function importBackup(data) {
 			if (!result.success) failures.push(`${feature.key}: ${result.message}`);
 			else if (result.notice) notices.push(result.notice);
 		} catch (e) {
+			// The alert gives only the message: the stack says where
+			console.error(LOG_PREFIX + ` Could not import ${feature.key}:`, e);
 			failures.push(`${feature.key}: ${e.message}`);
 		}
 	}
@@ -293,10 +296,12 @@ function confirmEraseAllSettings(onErased) {
 
 /**
  * Put the whole script back as it was installed: every feature's settings
- * and data, the feature switches, and debug mode off.
+ * and data, the feature switches, debug mode off, and the backup note
+ * forgotten.
  * Side effects: each feature resets its own storage; saves the default
- * featureConfig and debug mode; re-reads storage and boots any feature now
- * on; re-renders this script's sections of the settings tab.
+ * featureConfig and debug mode; forgets the backup note
+ * (forgetBackupNote); re-reads storage and boots any feature now on;
+ * re-renders this script's sections of the settings tab.
  * @returns {{success: boolean, message: string}} message: for the user
  */
 function eraseAllSettings() {
@@ -316,6 +321,8 @@ function eraseAllSettings() {
 	saveFeatureConfig();
 	DEBUG = false;
 	saveDebugMode();
+	// The note stays on Cyberspace; this browser forgets it and its key
+	forgetBackupNote();
 	featuresStorageReady();
 	refreshSettingsSection(SETTINGS_SECTION_KEY);
 	refreshSettingsSection(BACKUP_SECTION_KEY);
@@ -337,14 +344,21 @@ function backupSchema({ onImported, onErased }) {
 	return [
 		{ type: 'section', label: 'Backup', fields: [
 			{ type: 'hint', text: 'Every setting in this script, per-user nick colors included. Debug mode is not saved.' },
-			{ type: 'button', id: 'backup-save-file', label: 'Save all settings to a file', buttonText: 'Save Settings File',
-				onClick: () => downloadText(JSON.stringify(exportBackup(), null, 2), `atmospheric-modulator-settings-${today()}.json`, 'application/json') },
 			{ type: 'button', id: 'backup-copy', label: 'Copy all settings to the clipboard', buttonText: 'Copy to Clipboard',
 				onClick: () => copyText(JSON.stringify(exportBackup()), 'Settings copied to the clipboard.') },
-			{ type: 'button', id: 'backup-load-file', label: 'Load settings from a file', buttonText: 'Load Settings File',
-				onClick: () => pickTextFile(importFrom(onImported), { parse: parseBackupText }) },
 			{ type: 'button', id: 'backup-paste', label: 'Load settings from the clipboard', buttonText: 'Paste from Clipboard',
 				onClick: () => showPasteDialog(importFrom(onImported), { parse: parseBackupText }) },
+			{ type: 'hr' },
+			{ type: 'button', id: 'backup-save-file', label: 'Save all settings to a file', buttonText: 'Save Settings File',
+				onClick: () => downloadText(JSON.stringify(exportBackup(), null, 2), `atmospheric-modulator-settings-${today()}.json`, 'application/json') },
+			{ type: 'button', id: 'backup-load-file', label: 'Load settings from a file', buttonText: 'Load Settings File',
+				onClick: () => pickTextFile(importFrom(onImported), { parse: parseBackupText }) },
+			{ type: 'hr' },
+			{ type: 'hint', text: 'Save settings to a private (optionally encrypted) note on Cyberspace. Allows you to load your settings in from any browser.' },
+			{ type: 'button', id: 'backup-note-save', label: 'Save settings to private Cyberspace note', buttonText: 'Save to Note',
+				onClick: () => showSaveBackupNoteDialog() },
+			{ type: 'button', id: 'backup-note-load', label: 'Load settings from Cyberspace note', buttonText: 'Load from Note',
+				onClick: () => loadBackupNote(onImported) },
 		]},
 		{ type: 'section', label: 'Troubleshooting', fields: [
 			{ key: 'debugMode', type: 'toggle', label: 'Debug mode: log details to the console, and show nick colors\' calculations', default: false },

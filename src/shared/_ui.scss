@@ -125,6 +125,36 @@ $p: 'atmo';
 	content: "▾";
 }
 
+// Out of sight, still read by screen readers
+@mixin visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	border: 0;
+	white-space: nowrap;
+}
+
+// A dot after a section's title, for something waiting in it
+// (setSettingsSectionBadge): in the warning color, which the theme keeps
+// readable on the page. Its label is hidden text, for screen readers
+.#{$p}-settings-badge {
+	display: inline-block;
+	// Spaced and centered by the fold button's flex gap and alignment
+	width: 0.5em;
+	height: 0.5em;
+	border-radius: 50%;
+	background: var(--#{$p}-warn);
+}
+
+.#{$p}-settings-badge-text {
+	// The panel's sr-only class does not reach the heading, outside it
+	@include visually-hidden;
+}
+
 // Folded: the heading's gap would sit under nothing
 h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 	margin-bottom: 0;
@@ -439,14 +469,7 @@ h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 
 	// Screen reader only
 	.#{$p}-sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		border: 0;
+		@include visually-hidden;
 	}
 
 	// Text utilities
@@ -926,6 +949,13 @@ h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 	.#{$p}-update-banner-text {
 		flex: 1 1 auto;
 		min-width: 0;
+	}
+
+	// One line per newer version, under the message
+	.#{$p}-update-banner-news {
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 
 	.#{$p}-update-banner-actions {

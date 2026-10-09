@@ -34,8 +34,11 @@ if (isHostMatch(HOST_EXCLUDE) || isPathMatch(PATH_EXCLUDE)) {
 		registerSettingsSection({ key: SETTINGS_SECTION_KEY, title: SETTINGS_TITLE, description: SETTINGS_SECTION_DESCRIPTION, icon: logoIconHtml('atmo-section-icon'), startsOpen: true, render: renderSettingsSection });
 		// Every customized user, filled by the features that have any
 		registerUserListSection();
-		// Last on the tab, after this script's other sections: it covers them all
+		// After this script's settings sections, as it covers them all; only the
+		// Changelog comes after it
 		registerSettingsSection({ key: BACKUP_SECTION_KEY, title: BACKUP_SECTION_TITLE, order: 1, render: renderBackupSection });
+		// Each version's summary, for whoever dismissed the update banner
+		registerChangelogSection();
 		startFeatures();
 		startUpdateCheck();
 

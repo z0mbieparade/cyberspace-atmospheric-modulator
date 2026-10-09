@@ -15,9 +15,13 @@ const config = require('../userscript.config.js');
 
 // Shaped like the site's mount point
 const dom = createTestEnvironment('<head></head><body><div id="__nuxt" data-v-app></div></body>');
+// A test file may store values first, as a sync manager has them before
+// the script loads: it sets this in vi.hoisted, which runs before imports
+// (tests/world-clock-saved.test.js)
+globalThis.beforeBundleLoads?.(dom);
 
 // init.js is left out: it has side effects, and init.test.js runs it itself
-const code = readBundleSource(config, { version: '0.2.4', skip: ['init.js'] });
+const code = readBundleSource(config, { version: '0.2.5', skip: ['init.js'] });
 
 runAndExpose(code, [
 	// Shared runtime and the globals it reads
@@ -88,6 +92,22 @@ runAndExpose(code, [
 	'renderBackupSection',
 	'eraseAllSettings',
 	'showReportIssueDialog',
+
+	// Changelog section
+	'registerChangelogSection',
+	'renderChangelogSection',
+
+	// Backup note
+	'showSaveBackupNoteDialog',
+	'loadBackupNote',
+	'readBackupNoteState',
+	'BACKUP_NOTE_MAX_LENGTH',
+	'deriveTextKey',
+	'encryptText',
+	'decryptText',
+	'exportTextKey',
+	'importTextKey',
+	'lockedTextSalt',
 
 	// User menu
 	'showMenu',

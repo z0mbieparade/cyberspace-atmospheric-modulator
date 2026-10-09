@@ -31,7 +31,7 @@ function loadStorageShim({ GM_getValue, GM_setValue, GM, localStorage, console: 
 		function onGMStorageReady() { readyCalls++; readyOrder.push('onGMStorageReady'); }
 		${GM_STORAGE_SOURCE}
 		return { _GM_getValue, _GM_setValue, _hasSyncGM, _hasAsyncGM, _initGMCache, _gmCache,
-			isGMStorageReady, whenGMStorageReady, readyCalls: () => readyCalls, readyOrder };`
+			isGMStorageReady, whenGMStorageReady, hasPrivateGMStorage, readyCalls: () => readyCalls, readyOrder };`
 	);
 	return factory(GM_getValue, GM_setValue, GM, localStorage, consoleMock ?? console);
 }
@@ -223,6 +223,14 @@ describe('GM storage shim', () => {
 			// Ready now: a new one runs at once, and the old ones do not run again
 			shim.whenGMStorageReady(() => shim.readyOrder.push('late'));
 			expect(shim.readyOrder).toEqual(['onGMStorageReady', 'first', 'last', 'late']);
+		});
+	});
+
+	describe('private storage (hasPrivateGMStorage)', () => {
+		it('is private in a manager\'s storage, sync or async, and not in the site\'s localStorage', () => {
+			expect(loadStorageShim({ GM_getValue: (k, d) => d, GM_setValue: () => {}, localStorage }).hasPrivateGMStorage()).toBe(true);
+			expect(loadStorageShim({ GM: { getValue: async () => undefined, setValue: async () => {} }, localStorage }).hasPrivateGMStorage()).toBe(true);
+			expect(loadStorageShim({ localStorage }).hasPrivateGMStorage()).toBe(false);
 		});
 	});
 

@@ -16,6 +16,9 @@ function featureLogPrefix(area) {
 }
 // Shown in the update banner
 const SCRIPT_NAME = 'Atmospheric Modulator';
+// The update banner shows each newer version's summary line from it
+// (update-check.js); raw.githubusercontent.com is already an @connect host
+const CHANGELOG_URL = 'https://raw.githubusercontent.com/z0mbieparade/cyberspace-atmospheric-modulator/refs/heads/main/CHANGELOG.md';
 // The site's settings tab, and its hover title
 const SETTINGS_TAB_LABEL = 'AtmoMod';
 const SETTINGS_TAB_TITLE = 'Atmospheric Modulator (Userscript settings)';
@@ -23,12 +26,13 @@ const SETTINGS_TAB_TITLE = 'Atmospheric Modulator (Userscript settings)';
 const SETTINGS_TAB_HASH = 'atmomod';
 // The settings' name: the menu command, the dialog, and the section on that tab
 const SETTINGS_TITLE = 'Atmospheric Modulator Settings';
-// The settings tab's last section (backup.js); nick colors' help points to it
+// The settings tab's section for the whole script, above the Changelog
+// (backup.js); nick colors' help points to it
 const BACKUP_SECTION_TITLE = 'Backup & Troubleshooting';
 const SETTINGS_SECTION_DESCRIPTION = 'Usability features userscript: undither an image, give nicknames a hashed color, keep notes on them, and show world times in cIRC. Changes save as you make them.';
 // Published in users' localStorage: never change it
 const STORAGE_PREFIX = 'atmosphericModulator_';
-const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion', 'settingsSectionsOpen',
+const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion', 'settingsSectionsOpen', 'backupNote',
 	// image-undither
 	'unditherMissedPage',
 	// nick-colors

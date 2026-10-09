@@ -170,6 +170,35 @@ function settingsSectionFoldButton(el) {
 }
 
 /**
+ * Put a dot on a section's heading, for something waiting in it, or take
+ * it off. The dot carries its label as hidden text, so the heading's
+ * button says it to a screen reader too, and as a tooltip.
+ * Side effects: adds, updates or removes the dot in the section's heading.
+ * @param {Element} el - the section, or anything inside it, as its body
+ * @param {string|null} label - e.g. 'update available'; null to take it off
+ */
+function setSettingsSectionBadge(el, label) {
+	const toggle = settingsSectionFoldButton(el);
+	if (!toggle) return;
+	let badge = toggle.querySelector('.' + uiClass('settings-badge'));
+	if (!label) {
+		badge?.remove();
+		return;
+	}
+	if (!badge) {
+		badge = document.createElement('span');
+		badge.className = uiClass('settings-badge');
+		toggle.append(badge);
+	}
+	badge.title = label;
+	badge.textContent = '';
+	const text = document.createElement('span');
+	text.className = uiClass('settings-badge-text');
+	text.textContent = ` (${label})`;
+	badge.append(text);
+}
+
+/**
  * Fold a section open or shut.
  * Side effects: sets its button's aria-expanded and its contents' hidden.
  * @param {HTMLElement} section - the section element

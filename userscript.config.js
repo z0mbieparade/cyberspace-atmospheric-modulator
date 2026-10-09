@@ -60,6 +60,7 @@ module.exports = {
 		'shared/theme-colors.js',
 		'shared/update-check.js',
 		'shared/cyberspace-api.js',
+		'shared/passphrase-crypto.js',
 		'shared/ui-slider.js',
 		'shared/ui-settings-engine.js',
 		'shared/settings-page.js',
@@ -99,6 +100,8 @@ module.exports = {
 		] },
 		'settings-panel.js',
 		'backup.js',
+		'changelog-section.js',
+		'backup-note.js',
 		'init.js',
 	],
 };

@@ -197,6 +197,10 @@ function loadWorldClock() {
 		worldClock = sanitizeWorldClock(null);
 	}
 }
+// At load, as every feature reads its settings: onStorageReady runs only
+// once async storage loads (Greasemonkey 4), never with sync storage
+// (Tampermonkey), which would leave the defaults on every page
+loadWorldClock();
 
 /**
  * Replace the settings, save them, and redraw the row.

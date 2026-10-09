@@ -23,7 +23,9 @@ let featuresStarted = false;
  *   onStorageReady: re-read its settings from storage: after async GM
  *   storage loads, and after an import stored new values (a backup, Import
  *   from Nick Colors), which one feature may read from another's keys. It may
- *   run before or after boot, and gets whether the feature has booted.
+ *   run before or after boot, and gets whether the feature has booted. It
+ *   never runs at load with sync storage (Tampermonkey): a feature reads its
+ *   settings as its file loads too, or it starts on its defaults there.
  *   The rest feed the script-wide backup and troubleshooting (backup.js), and
  *   run whether or not the feature is on: exportBackup: its settings, as JSON
  *   data; importBackup: store what exportBackup gave, told whether the feature

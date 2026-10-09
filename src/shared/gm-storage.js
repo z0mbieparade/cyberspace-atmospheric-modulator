@@ -60,6 +60,17 @@ function isGMStorageReady() {
 	return _gmStorageReady;
 }
 
+/**
+ * Whether values are kept in the userscript manager's storage, where only
+ * this script reads them. Without a manager they fall back to the site's
+ * localStorage, which every script on the page can read: no place for a
+ * secret.
+ * @returns {boolean}
+ */
+function hasPrivateGMStorage() {
+	return _hasSyncGM || _hasAsyncGM;
+}
+
 // Run once storage is ready, after onGMStorageReady
 const _gmStorageReadyCallbacks = [];
 

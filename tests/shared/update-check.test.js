@@ -23,21 +23,24 @@ let window;
  * Evaluate the update check as one script would have it, in its own scope.
  * @param {string} scriptName
  * @param {object} [gm] - globals the manager would provide (GM_xmlhttpRequest)
+ * @param {string} [changelogUrl] - the script's CHANGELOG_URL; none to leave
+ *   it undefined, as a script without one has it
  * @returns {object} the script's update-check functions and its storage
  */
-function loadScript(scriptName, gm = {}) {
+function loadScript(scriptName, gm = {}, changelogUrl = null) {
 	const store = {};
 	const factory = window.eval(`(function (GM_xmlhttpRequest) {
 		const VERSION = '${LOCAL_VERSION}';
 		const SCRIPT_NAME = '${scriptName}';
 		const SCRIPT_URL = 'https://example.com/${scriptName}.user.js';
 		const LOG_PREFIX = '[${scriptName}]';
+		${changelogUrl ? `const CHANGELOG_URL = '${changelogUrl}';` : ''}
 		const logDebug = () => {};
 		const _GM_getValue = (k, d) => (k in this.store ? this.store[k] : d);
 		const _GM_setValue = (k, v) => { this.store[k] = v; };
 		const localStorage = { getItem: () => null };
 		${SOURCE}
-		return { compareVersions, isNewerVersion, showUpdateBanner, checkForUpdates, startUpdateCheck, bindVersionLink,
+		return { compareVersions, isNewerVersion, showUpdateBanner, changelogSummaries, checkForUpdates, startUpdateCheck, bindVersionLink,
 			getDismissedUpdateVersion, saveDismissedUpdateVersion, UPDATE_BANNER_ID, versionLinkHtml,
 			getUpdateAvailable: () => UPDATE_AVAILABLE };
 	})`);
@@ -187,5 +190,100 @@ describe('checkForUpdates', () => {
 		const s = loadScript('Nick Colors', { GM_xmlhttpRequest: managerServing('// @version 9.0.0') });
 		await s.startUpdateCheck();
 		expect(window.document.getElementById(s.UPDATE_BANNER_ID).textContent).toContain('v9.0.0');
+	});
+});
+
+describe('what is new, in the banner', () => {
+	const CHANGELOG = [
+		'# Changelog', '', 'Each version starts with a summary.', '',
+		'## [1.6.0] - 2026-12-01', '', '> Six: the newest.', '', '### Added', '- **Six**',
+		'## [1.5.0] - 2026-11-01', '', '### Fixed', '- no summary line here',
+		'## [1.4.0] - 2026-10-01', '', '> Four: <b>bold</b> & more.', '',
+		`## [${LOCAL_VERSION}] - 2026-09-01`, '', '> The installed one.', '',
+	].join('\r\n');
+
+	it('takes the summary line of each version newer than this one, up to the published one, newest first', () => {
+		expect(script.changelogSummaries(CHANGELOG, LOCAL_VERSION, '1.6.0')).toEqual([
+			{ version: '1.6.0', summary: 'Six: the newest.' },
+			{ version: '1.4.0', summary: 'Four: <b>bold</b> & more.' },
+		]);
+		// Not past the published version
+		expect(script.changelogSummaries(CHANGELOG, LOCAL_VERSION, '1.4.0').map(s => s.version)).toEqual(['1.4.0']);
+		expect(script.changelogSummaries(`## [1.4.0]\n\n> ${'x'.repeat(300)}`, LOCAL_VERSION, '1.4.0')[0].summary).toHaveLength(160);
+	});
+
+	it('reads this project\'s own CHANGELOG.md, whose summaries users will see', () => {
+		const changelog = readFileSync(join(__dirname, '..', '..', 'CHANGELOG.md'), 'utf8');
+		const summaries = script.changelogSummaries(changelog, '0.2.3', '0.2.5');
+		expect(summaries.map(s => s.version)).toEqual(['0.2.5', '0.2.4']);
+		for (const { summary } of summaries) expect(summary.length).toBeGreaterThan(10);
+		// Nick Colors' 1.x history below the releases is not this script's,
+		// and is not offered as newer; every release has a summary
+		const all = script.changelogSummaries(changelog).map(s => s.version);
+		const releases = [...changelog.matchAll(/^## \[(0\.[\d.]+)\]/gm)].map(m => m[1]);
+		expect(all).toEqual(releases);
+		expect(all).toContain('0.2.0');
+		expect(all.every(version => version.startsWith('0.'))).toBe(true);
+		// Short enough to show whole: a longer one is cut with an ellipsis
+		for (const [, summary] of changelog.matchAll(/^> (.+)$/gm)) expect(summary.trim().length, summary).toBeLessThanOrEqual(160);
+	});
+
+	it('lists them as text under the message, at most three, saying how many more', () => {
+		const summaries = ['1.8.0', '1.7.0', '1.6.0', '1.5.0', '1.4.0'].map(version => ({ version, summary: `<img src=x onerror=alert(1)> ${version}` }));
+		const banner = script.showUpdateBanner('1.8.0', summaries);
+		const lines = Array.from(banner.querySelectorAll('li'), li => li.textContent);
+		expect(lines).toEqual(['v1.8.0: <img src=x onerror=alert(1)> 1.8.0', 'v1.7.0: <img src=x onerror=alert(1)> 1.7.0', 'v1.6.0: <img src=x onerror=alert(1)> 1.6.0', 'and 2 more updates']);
+		expect(banner.querySelector('img')).toBeNull();
+	});
+
+	it('fetches the changelog only when there is an update, and shows the banner without it when it fails', async () => {
+		const serving = (changelog) => vi.fn(({ url, onload, onerror }) => {
+			if (!url.endsWith('CHANGELOG.md')) onload({ responseText: '// @version 1.6.0' });
+			else if (changelog === null) onerror({});
+			else onload({ responseText: changelog });
+		});
+		const request = serving(CHANGELOG);
+		const s = loadScript('Nick Colors', { GM_xmlhttpRequest: request }, 'https://example.com/CHANGELOG.md');
+		await s.startUpdateCheck();
+		const banner = window.document.getElementById(s.UPDATE_BANNER_ID);
+		expect(Array.from(banner.querySelectorAll('li'), li => li.textContent)).toEqual(['v1.6.0: Six: the newest.', 'v1.4.0: Four: <b>bold</b> & more.']);
+
+		window.document.body.innerHTML = '';
+		const failing = loadScript('Nick Colors', { GM_xmlhttpRequest: serving(null) }, 'https://example.com/CHANGELOG.md');
+		await failing.startUpdateCheck();
+		const plain = window.document.getElementById(failing.UPDATE_BANNER_ID);
+		expect(plain.textContent).toContain('v1.6.0');
+		expect(plain.querySelector('li')).toBeNull();
+
+		const upToDate = vi.fn(({ onload }) => onload({ responseText: `// @version ${LOCAL_VERSION}` }));
+		await loadScript('Nick Colors', { GM_xmlhttpRequest: upToDate }, 'https://example.com/CHANGELOG.md').startUpdateCheck();
+		expect(upToDate).toHaveBeenCalledTimes(1);
+	});
+
+	it('shows the banner without the list when the changelog never answers', async () => {
+		vi.useFakeTimers();
+		try {
+			const request = vi.fn(({ url, onload }) => {
+				// The changelog request hangs: no answer, no error
+				if (!url.endsWith('CHANGELOG.md')) onload({ responseText: '// @version 1.6.0' });
+			});
+			const s = loadScript('Nick Colors', { GM_xmlhttpRequest: request }, 'https://example.com/CHANGELOG.md');
+			const started = s.startUpdateCheck();
+			await vi.advanceTimersByTimeAsync(5000);
+			await started;
+			const banner = window.document.getElementById(s.UPDATE_BANNER_ID);
+			expect(banner.textContent).toContain('v1.6.0');
+			expect(banner.querySelector('li')).toBeNull();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('does not fetch the changelog for a version the user dismissed', async () => {
+		const request = vi.fn(({ onload }) => onload({ responseText: '// @version 1.6.0' }));
+		const s = loadScript('Nick Colors', { GM_xmlhttpRequest: request }, 'https://example.com/CHANGELOG.md');
+		s.saveDismissedUpdateVersion('1.6.0');
+		await s.startUpdateCheck();
+		expect(request.mock.calls.map(([details]) => details.url)).toEqual(['https://example.com/Nick Colors.user.js']);
 	});
 });
