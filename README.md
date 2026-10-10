@@ -1,26 +1,22 @@
 <p align="center"><img src="assets/logo.svg" alt="" width="96" height="96"></p>
-
 # Cyberspace Atmospheric Modulator
 
-A userscript of usability features for [Cyberspace](https://cyberspace.online) and [Cyberspace Beta](https://beta.cyberspace.online): see the original un-dithered images, give every username its own hashed color, keep personal notes, and see world times in cIRC.
+A custom userscript to add additional usability features to [Cyberspace.online](https://cyberspace.online) (and beta):
+- Show the original un-dithered version of an image on hover/long press
+- Give every username its own hashed color
+- Keep personal (private) notes on people so you can remember who they are
+- Add a little World Clock widget above cIRC
 
-## Install
+![Cyberspace Preview with AtmoMod installed](assets/cyberspace-preview.png)
+
+![Undither Images preview](assets/elmo-undither.gif)
+## Quick Start
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) or [Greasemonkey](https://www.greasespot.net/)
 2. Open [cyberspace-atmospheric-modulator.user.js](https://raw.githubusercontent.com/z0mbieparade/cyberspace-atmospheric-modulator/refs/heads/main/cyberspace-atmospheric-modulator.user.js) and choose **Install**.
 3. Reload Cyberspace.
 
-Coming from the Nick Colors userscript? Check the wiki to see how to move your settings over.
-
-## Features
-
-| Feature | What it does | Default |
-|---|---|---|
-| Image undither | Hover, focus or press and hold a dithered image to see the original | On |
-| Nick colors | Gives every username its own color, the [Nick Colors](https://github.com/z0mbieparade/cyberspace-nick-colors) userscript built in | On |
-| Nick notes | Personal notes on a username, shown when you hover it | On |
-| World clock | City times under cIRC's header, on its page and in the sidebar, in 12- or 24-hour time, with optional UTC offsets | Off |
-| User menu | Right-click a username: Color, Notes, Poke, Profile | — |
+**Coming from the Nick Colors userscript? Check the wiki to see how to move your settings over.**
 
 Settings are in the site's **Settings > AtmoMod** tab. Access them via **Settings** page or via the little modulator icon under the globe in the sidebar.
 
