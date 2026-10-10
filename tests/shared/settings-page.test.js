@@ -33,7 +33,8 @@ function loadScript(name = 'script') {
 		// theme-colors.js's: counts how often the colors were published
 		function initThemeVariables() { window.__themePublished = (window.__themePublished || 0) + 1; }
 		${SOURCE}
-		return { registerSettingsSection, refreshSettingsSection, configureSettingsTab, openSettingsSection, settingsTabUrl, syncSettingsPage };
+		return { registerSettingsSection, refreshSettingsSection, configureSettingsTab, openSettingsSection, settingsTabUrl, syncSettingsPage,
+			renderSettingsSections, refreshSettingsTabSections };
 	})()`);
 }
 
@@ -218,6 +219,51 @@ describe('the Userscripts tab', () => {
 
 		const titles = Array.from(panel().querySelectorAll('section h3'), h => h.textContent);
 		expect(titles).toEqual(['Main', 'Other', 'Backup']);
+	});
+
+	it('shows the sections in another place too, such as a dialog, following isShown there', () => {
+		let shown = false;
+		const script = loadScript();
+		script.registerSettingsSection({ key: 'a', title: 'A', render: (body) => { body.textContent = 'form a'; } });
+		script.registerSettingsSection({ key: 'b', title: 'B', isShown: () => shown, render: (body) => { body.textContent = 'form b'; } });
+		const host = document.createElement('div');
+		document.body.append(host);
+		script.renderSettingsSections(host);
+		const keys = () => Array.from(host.querySelectorAll('[data-atmo-settings-section]'), el => el.dataset.atmoSettingsSection);
+		expect(keys()).toEqual(['a']);
+		expect(host.textContent).toContain('form a');
+		shown = true;
+		script.syncSettingsPage();
+		expect(keys()).toEqual(['a', 'b']);
+	});
+
+	it('redraws the tab\'s sections, as after a dialog closes, leaving a dialog\'s copies', async () => {
+		let renders = 0;
+		const script = loadScript();
+		script.registerSettingsSection({ key: 'a', title: 'A', render: () => { renders++; } });
+		await openTab();
+		const host = document.createElement('div');
+		document.body.append(host);
+		script.renderSettingsSections(host);
+		const tabCopy = panel().querySelector('[data-atmo-settings-section="a"]');
+		const dialogCopy = host.querySelector('[data-atmo-settings-section="a"]');
+		const before = renders;
+		script.refreshSettingsTabSections();
+		expect(tabCopy.isConnected).toBe(false);
+		expect(panel().querySelector('[data-atmo-settings-section="a"]')).not.toBeNull();
+		expect(dialogCopy.isConnected).toBe(true);
+		expect(renders - before).toBe(1);
+	});
+
+	it('leaves another script\'s sections in the shared panel when it redraws its own', async () => {
+		const mine = loadScript('mine');
+		const theirs = loadScript('theirs');
+		mine.registerSettingsSection({ key: 'a', title: 'A', render: () => {} });
+		theirs.registerSettingsSection({ key: 'b', title: 'B', render: (body) => { body.textContent = 'draft'; } });
+		await openTab();
+		const theirSection = panel().querySelector('[data-atmo-settings-section="b"]');
+		mine.refreshSettingsTabSections();
+		expect(theirSection.isConnected).toBe(true);
 	});
 
 	it('shows a section only while its isShown says so, checked on every sync', () => {

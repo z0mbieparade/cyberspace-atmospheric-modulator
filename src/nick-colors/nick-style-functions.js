@@ -398,6 +398,29 @@ function generateStyles(username, options = {})
 	};
 }
 
+// The site's italic text, such as a cIRC /me line, which a name in it follows
+const ITALIC_CONTEXT_SELECTOR = '.italic';
+
+/**
+ * Style a name's element in its color, variations and icons.
+ * Side effects: replaces the element's inline style with the name's styles,
+ * each !important; a name inside ITALIC_CONTEXT_SELECTOR is italic whatever
+ * its styles set. Sets data-{matchType}-colored, data-username and
+ * data-contrast-ratio. Rewrites its text with the name's icons, keeping the
+ * original in data-original-text to restore when icons go. Removes an old
+ * .nc-nick-debug child; with options.debugData, adds a debug tooltip.
+ * @param {HTMLElement} element - the name's element
+ * @param {string} username - the name whose styles it gets
+ * @param {Object} [options]
+ * @param {string} [options.matchType='nick'] - names the data-*-colored flag
+ * @param {Object} [options.mergeStyles] - styles laid over the name's own
+ * @param {Object} [options.overrideStyles] - styles used instead of the name's own
+ * @param {string} [options.themeName] - the theme to color for; the site's by default
+ * @param {Object} [options.effectiveConfig] - the color settings; the saved ones by default
+ * @param {boolean} [options.isInverted] - draw it inverted; found from INVERTED_CONTAINERS by default
+ * @param {boolean} [options.debugData=false] - attach the calculation details
+ * @returns {HTMLElement} the element
+ */
 function applyStyles(element, username, options = {}) 
 {
 	options = {
@@ -436,6 +459,11 @@ function applyStyles(element, username, options = {})
 	{
 		styles = { ...options.overrideStyles };
 	}
+
+	// A name in italic text, as in a cIRC /me line, stays italic: a style of
+	// its own, an override or a hashed variation may set it upright, and
+	// written inline it would beat the line's own italic
+	if (element.closest(ITALIC_CONTEXT_SELECTOR)) styles.fontStyle = 'italic';
 
 	// Clear previous inline styles before applying new ones
 	// This ensures old background-color/padding from inversion is removed when no longer needed

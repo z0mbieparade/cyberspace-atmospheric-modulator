@@ -67,6 +67,7 @@ runAndExpose(code, [
 	'USER_LIST_SECTION_KEY',
 	'registerUserListSection',
 	'refreshUserList',
+	'renderUserList',
 	'applySettings',
 
 	// Settings panel

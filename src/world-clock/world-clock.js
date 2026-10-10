@@ -417,14 +417,14 @@ function renderWorldClockSettings(body) {
  */
 function worldClockCityPicker() {
 	const fieldset = document.createElement('fieldset');
-	fieldset.className = uiClass('world-clock-cities');
+	fieldset.className = uiClass('world-clock-cities', 'chip-row');
 	const legend = document.createElement('legend');
 	legend.textContent = 'Cities';
 	fieldset.append(legend);
 	for (const city of WORLD_CLOCK_CITIES) {
 		const button = document.createElement('button');
 		button.type = 'button';
-		button.className = uiClass('world-clock-pick');
+		button.className = uiClass('chip');
 		button.dataset.city = city.id;
 		button.textContent = city.label;
 		const show = () => button.setAttribute('aria-pressed', String(worldClock.cities.includes(city.id)));

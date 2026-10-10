@@ -201,6 +201,17 @@ describe('DOM manipulation', () => {
 			expect(el.textContent).toContain('★');
 			expect(el.dataset.iconApplied).toBe('true');
 		});
+
+		it('keeps a name in a /me line italic, over a style that sets it upright', () => {
+			customNickColors.testuser = { color: '#ff0000', fontStyle: 'normal' };
+			document.body.innerHTML = '<div class="italic"><span><a href="/testuser">testuser</a></span></div><a href="/testuser">testuser</a>';
+			const [inAction, outside] = document.querySelectorAll('a');
+			applyStyles(inAction, 'testuser');
+			applyStyles(outside, 'testuser');
+
+			expect(inAction.style.fontStyle).toBe('italic');
+			expect(outside.style.fontStyle).toBe('normal');
+		});
 	});
 
 	describe('finding and coloring names', () => {

@@ -21,15 +21,20 @@ const USERNAME_SELECTORS = [
 	'span.cursor-pointer.hover\\:underline',  // beta site username spans
 ];
 
+// cIRC popped out into the sidebar: chat, on any page, wherever the rail sits
+const CHAT_RAIL = '.circ-rail';
+
 // Containers to search within for USERNAME LINKS ONLY (not @mentions)
 // This helps avoid marking non-username links that don't have @ prefix
 // @mentions are searched across the whole page since they're explicit
 const CONTAINER_HINTS = IS_BETA_SITE ? [
 	'#main-content-area',           // beta: chat messages
 	'.space-y-1',                   // beta: user list
+	CHAT_RAIL,
 ] : [
 	'.chat-main-content',           // main: chat messages
 	'.profile-box-inverted',        // main: profile header
+	CHAT_RAIL,
 ];
 
 // Path patterns where links count anywhere on the page (skip container hints)
@@ -46,6 +51,21 @@ const CONTAINER_HINTS_EXCLUDE = [
 	'.editor-wrapper',
 	'code', 'pre', 'script'
 ];
+
+/**
+ * Whether an element is in a container the finder never searches. The chat
+ * rail counts as chat even inside one of those (the sidebar): only an
+ * excluded container inside the rail, such as a code block, excludes it.
+ * @param {Element} element
+ * @returns {boolean}
+ */
+function isInExcludedContainer(element) {
+	const excluded = CONTAINER_HINTS_EXCLUDE.map(sel => element.closest(sel)).filter(Boolean);
+	if (!excluded.length) return false;
+	const rail = element.closest(CHAT_RAIL);
+	// Only one strictly inside the rail: the rail may be the sidebar itself
+	return !rail || excluded.some(container => container !== rail && rail.contains(container));
+}
 
 // Single-segment site paths that are not usernames
 const EXCLUDE_VALUES = [
@@ -166,7 +186,7 @@ function isLikelyUsername(element) {
 		if (!CONTAINER_HINTS.some(sel => element.closest(sel))) return false;
 	}
 
-	if (CONTAINER_HINTS_EXCLUDE.some(sel => element.closest(sel))) return false;
+	if (isInExcludedContainer(element)) return false;
 
 	// For elements with href, validate the path
 	if (href) {
@@ -219,7 +239,7 @@ function markMentions() {
 				// Dialog previews manage their own styling
 				if (parent.closest(`.${UI_PREFIX}-dialog-preview`)) return NodeFilter.FILTER_REJECT;
 				if (['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT'].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
-				if (CONTAINER_HINTS_EXCLUDE.some(sel => parent.closest(sel))) return NodeFilter.FILTER_REJECT;
+				if (isInExcludedContainer(parent)) return NodeFilter.FILTER_REJECT;
 				return NodeFilter.FILTER_ACCEPT;
 			}
 		}

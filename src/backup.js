@@ -333,10 +333,10 @@ function eraseAllSettings() {
 }
 
 /**
- * The backup and troubleshooting fields, for the settings dialog and the
- * settings tab's section.
+ * The Backup & Troubleshooting section's fields, on the settings tab and
+ * in the settings dialog alike.
  * @param {{onImported: Function, onErased: Function}} after - each shows the
- *   settings after an import or an erase
+ *   settings after an import or an erase, where the section is
  * @returns {Array} settings engine schema
  */
 function backupSchema({ onImported, onErased }) {
@@ -377,19 +377,24 @@ function backupSchema({ onImported, onErased }) {
 }
 
 /**
- * Fill the settings tab's Backup & Troubleshooting section. Debug mode saves
+ * Fill the Backup & Troubleshooting section, on the settings tab or in the
+ * settings dialog. Debug mode saves
  * as it changes, like the site's own settings.
  * Side effects: fills body; a debug mode change writes it to storage.
  * @param {HTMLElement} body - the section body from registerSettingsSection
  */
 function renderBackupSection(body) {
+	// What holds this copy: the tab's panel, or a settings dialog's sections.
+	// The section is in it when it renders, and it outlives the erase's redraw
+	const holder = body.closest(`[${SETTINGS_SECTION_ATTR}]`)?.parentElement ?? document;
 	renderSettingsForm(body, backupSchema({
 		// The sections that show imported values re-render themselves; this
 		// one shows none, so focus stays on the button that was used
 		onImported: () => {},
 		// The erase re-renders this section too (eraseAllSettings), taking the
-		// focused button with it: focus goes to the section's heading instead
-		onErased: () => focusSettingsSection(BACKUP_SECTION_KEY),
+		// focused button with it: focus goes to the section's heading instead,
+		// in the copy that was used
+		onErased: () => focusSettingsSection(BACKUP_SECTION_KEY, holder),
 	}), (key, value) => {
 		if (key !== 'debugMode') return;
 		DEBUG = value;

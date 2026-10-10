@@ -298,9 +298,90 @@ h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 		justify-content: flex-end;
 	}
 
+	// A setting that belongs to the switch above it (a schema field's `sub`,
+	// a feature's switch detail): set in, with a rule beside it, so it reads
+	// as part of that switch
+	.#{$p}-sub-setting {
+		margin-left: var(--spacing-sm);
+		padding-left: var(--spacing-sm);
+		border-left: 1px dashed var(--#{$p}-border);
+	}
+
+	// A wrapping row of chips (below)
+	.#{$p}-chip-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-sm, 0.5rem);
+	}
+
 	button {
 		flex: 1 0 auto;
 		padding: var(--spacing-sm);
+
+		// One choice of several, as the site's theme buttons on its Appearance
+		// tab: outlined, filled while chosen (aria-pressed), with an optional
+		// check after the name (.chip-check). In the panel's colors, or its
+		// own: --atmo-chip-fg and --atmo-chip-bg, with .chip-themed (below).
+		//
+		// The !important rules: the site inverts a hovered, focused or pressed
+		// button, from rules of unknown weight, and a chip keeps focus after a
+		// click, so without them it would look chosen until focus moved
+		&.#{$p}-chip {
+			flex: none;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			// Tighter than the site's own theme buttons (px-3 py-2)
+			padding: 0.25rem 0.5rem;
+			font: inherit;
+			font-size: calc(var(--font-size-base, 1rem) * 0.75);
+			// The text color, not the site's border color its own buttons use:
+			// that falls below the 3:1 a control's edge needs on some themes
+			// (about 1.6:1 on Dark). In the panel's colors this edge is the
+			// panel's fg; a themed chip's is its theme's, and gets a ring
+			border: 1px solid var(--#{$p}-chip-fg, var(--#{$p}-fg));
+			border-radius: 0.125rem;
+			cursor: pointer;
+
+			&,
+			&:hover,
+			&:focus,
+			&:active {
+				background: var(--#{$p}-chip-bg, transparent) !important;
+				color: var(--#{$p}-chip-fg, var(--#{$p}-fg)) !important;
+			}
+
+			// The panel dims a hovered button's edge: keep it, and mark the hover
+			&:hover {
+				border-color: var(--#{$p}-chip-fg, var(--#{$p}-fg));
+				text-decoration: underline;
+			}
+
+			&[aria-pressed="true"],
+			&[aria-pressed="true"]:hover,
+			&[aria-pressed="true"]:focus,
+			&[aria-pressed="true"]:active {
+				background: var(--#{$p}-chip-fg, var(--#{$p}-fg)) !important;
+				border-color: var(--#{$p}-chip-fg, var(--#{$p}-fg));
+				color: var(--#{$p}-chip-bg, var(--#{$p}-bg)) !important;
+			}
+
+			.#{$p}-chip-check {
+				display: none;
+			}
+
+			&[aria-pressed="true"] .#{$p}-chip-check {
+				display: inline;
+			}
+
+			// In another theme's colors, which may match the panel's background
+			// (a pressed Light chip on Dark is black on black): a ring in the
+			// panel's fg, which always stands 3:1 or more off its bg, keeps
+			// every chip's edge
+			&.#{$p}-chip-themed {
+				box-shadow: 0 0 0 1px var(--#{$p}-fg);
+			}
+		}
 
 		&:hover {
 			border-color: var(--#{$p}-fg-dim);
@@ -675,6 +756,9 @@ h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 .#{$p}-slider {
 	--thumb-w: 14px;
 	position: relative;
+	// Keeps the thumb's and input's z-index inside the slider, so a sticky
+	// block scrolled over it, as Nick Colors' examples, stays on top
+	isolation: isolate;
 	height: 24px;
 	margin: 0.5rem 0 0.25rem;
 

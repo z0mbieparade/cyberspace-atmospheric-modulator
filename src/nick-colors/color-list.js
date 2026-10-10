@@ -88,7 +88,7 @@ function nickColorListActions() {
 
 /**
  * Draw the list's names again, in place: the settings, the theme or the
- * Only color my chooms switch changed how names look. Rows and focus stay.
+ * Only my chooms switch changed how names look. Rows and focus stay.
  * Side effects: restyles each preview name.
  */
 function restyleNickColorList() {

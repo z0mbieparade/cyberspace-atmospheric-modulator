@@ -16,8 +16,9 @@ const userListSources = [];
 // source puts each part it returns in one, with userListColumn
 const USER_LIST_COLUMNS = ['mark', 'name', 'text', 'edit', 'delete'];
 
-// The section's body while it is on the page, for refreshUserList
-let userListBody = null;
+// The section's bodies on the page, for refreshUserList: the settings tab's
+// and a settings dialog's can both be open
+const userListBodies = new Set();
 
 /**
  * Add what a feature shows in the Users section.
@@ -82,7 +83,7 @@ function userListShown() {
  * @param {HTMLElement} body - the section body from registerSettingsSection
  */
 function renderUserList(body) {
-	userListBody = body;
+	userListBodies.add(body);
 	body.textContent = '';
 	const sources = userListSources.filter(source => source.isShown());
 	// One row per user, whatever the case each source stores the name in.
@@ -123,18 +124,23 @@ function renderUserList(body) {
 }
 
 /**
- * Redraw the Users section, when it is on the page, keeping focus as
+ * Redraw the Users section wherever it is on the page, keeping focus as
  * redrawEntryList does.
- * Side effects: replaces the list; may move focus.
+ * Side effects: replaces each list; may move focus; forgets bodies that
+ * left the page.
  * @param {string} [focusUser] - the user the change was about
  */
 function refreshUserList(focusUser) {
-	if (!userListBody?.isConnected) return;
-	const body = userListBody;
-	// A button below the list is in no row, so redrawEntryList leaves focus
-	// on the button the redraw drops
-	const active = document.activeElement;
-	const action = body.contains(active) ? active.dataset.userListAction : undefined;
-	redrawEntryList(body, () => renderUserList(body), focusUser, settingsSectionFoldButton(body));
-	if (action) body.querySelector(`[data-user-list-action="${action}"]`)?.focus();
+	for (const body of userListBodies) {
+		if (!body.isConnected) {
+			userListBodies.delete(body);
+			continue;
+		}
+		// A button below the list is in no row, so redrawEntryList leaves focus
+		// on the button the redraw drops
+		const active = document.activeElement;
+		const action = body.contains(active) ? active.dataset.userListAction : undefined;
+		redrawEntryList(body, () => renderUserList(body), focusUser, settingsSectionFoldButton(body));
+		if (action) body.querySelector(`[data-user-list-action="${action}"]`)?.focus();
+	}
 }

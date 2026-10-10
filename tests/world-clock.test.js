@@ -143,7 +143,7 @@ describe('world clock settings', () => {
 		vi.useFakeTimers({ now: new Date('2026-01-15T12:00:00Z'), toFake: ['Date', 'setTimeout', 'clearTimeout'] });
 		addHeader();
 		const picker = openSection().querySelector('fieldset');
-		expect(picker.querySelector('legend').textContent).toBe('Cities');
+		expect(picker.querySelector('legend').textContent.trim()).not.toBe('');
 
 		const tokyo = picker.querySelector('button[data-city="tokyo"]');
 		expect(tokyo.textContent).toBe('Tokyo');

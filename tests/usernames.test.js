@@ -78,4 +78,33 @@ describe('the username finder', () => {
 		expect(doc.querySelector('a').hasAttribute('data-atmo-user')).toBe(false);
 		expect(doc.querySelectorAll('[data-atmo-mention]').length).toBe(1);
 	});
+
+	it('finds names in cIRC popped out into the sidebar, on any page, even inside the site\'s sidebar', async () => {
+		doc.body.innerHTML = `
+			<nav class="sidebar"><a href="/feed">feed</a><a href="/carol">carol</a>
+				<div class="circ-rail">
+					<span class="text-fg"> * <a href="/alice" class="no-underline font-bold">alice</a> waves * </span>
+					<span>hi @frank</span>
+					<pre><a href="/dave">dave</a> @gina</pre>
+				</div>
+			</nav>
+			<a href="/erin">erin</a>`;
+		await settle();
+		const marked = (name) => doc.querySelector(`a[href="/${name}"]`).getAttribute('data-atmo-user');
+		// The /me line's link, in the rail
+		expect(marked('alice')).toBe('alice');
+		// Still left alone: the sidebar's own links, code in the rail, and links outside any chat
+		expect(marked('carol')).toBeNull();
+		expect(marked('dave')).toBeNull();
+		expect(marked('erin')).toBeNull();
+		// Mentions likewise: in the rail, but not in its code
+		const mentions = Array.from(doc.querySelectorAll('[data-atmo-mention]'), el => el.getAttribute('data-atmo-user'));
+		expect(mentions).toEqual(['frank']);
+	});
+
+	it('finds names when the rail is the sidebar itself', async () => {
+		doc.body.innerHTML = '<aside class="sidebar circ-rail"><a href="/alice" class="no-underline font-bold">alice</a></aside>';
+		await settle();
+		expect(doc.querySelector('a').getAttribute('data-atmo-user')).toBe('alice');
+	});
 });

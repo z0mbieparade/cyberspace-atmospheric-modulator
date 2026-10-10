@@ -54,6 +54,8 @@ registerFeature({
 	reportSummary: nickReportSummary,
 	// Off takes the colors off every name now; on puts them back
 	onSwitch: () => colorizeAll(),
+	// Only my chooms, under the switch in the main settings
+	renderSwitchDetail: renderNickFriendsSettings,
 
 	boot() {
 		// This script starts at document-start, before the site's stylesheet:
@@ -62,6 +64,8 @@ registerFeature({
 		loadSiteCustomTheme();
 		loadSiteTheme();
 		initThemeVariables();
+		// The theme may have changed while the script was not running
+		followSiteThemePreset();
 
 		// Switched off: gone from the menu now, not after a reload. With only
 		// friends colored, a friend can be edited or removed, anyone else added
@@ -83,7 +87,8 @@ registerFeature({
 		});
 
 		if (registerMenuCommand) {
-			registerMenuCommand('Nick Colors Settings', createSettingsPanel);
+			// The script's settings dialog, at this section
+			registerMenuCommand('Nick Colors Settings', () => openSettingsPanel(SETTINGS_SECTION_KEY));
 			registerMenuCommand('Refresh Nick Colors', refreshNickColors);
 			registerMenuCommand('Clear All Custom Colors', confirmClearCustomNickColors);
 		}
@@ -103,6 +108,8 @@ registerFeature({
 			loadSiteCustomTheme();
 			loadSiteTheme();
 			initThemeVariables();
+			// Its section shows the new preset's ranges
+			if (followSiteThemePreset()) refreshSettingsSection(SETTINGS_SECTION_KEY);
 			colorizeAll();
 		}).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 

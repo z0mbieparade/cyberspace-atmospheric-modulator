@@ -52,6 +52,9 @@ const DEFAULT_SITE_CONFIG = {
 	prependIcon: false,   // prepend random icon from iconSet
 	appendIcon: false,    // append random icon from iconSet
 	iconSet: '● ○ ◆ ◇ ■ □ ▲ △ ★ ☆ ♦ ♠ ♣ ♥ ☢ ☣ ☠ ⚙ ⬡ ⬢ ♻ ⚛ ⚠ ⛒',  // space-separated icons
+
+	followSiteTheme: false, // apply the site theme's preset whenever the theme changes
+	followedTheme: '',      // the theme whose preset it last applied: only a different one replaces the ranges
 };
 
 // Containers where we should invert backgroundColor/Color for nicks
@@ -61,7 +64,7 @@ const INVERTED_CONTAINERS = [
 
 // Nick color settings for each site theme, by the same names as the shared
 // THEME_COLORS (which holds the themes' colors). In the site's own order,
-// which the preset select shows, after Full Spectrum, the script's default.
+// which the preset buttons show, after Full Spectrum, the script's default.
 // Not every range stays at 4.5:1 on its theme's background: contrastThreshold
 // adjusts or inverts a color that falls below it
 const PRESET_THEMES = {

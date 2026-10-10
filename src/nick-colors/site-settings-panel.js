@@ -19,13 +19,13 @@ function contrastFields(threshold = 4.5) {
 }
 
 /**
- * The preset select's option for a theme: its preset's name, lowercased,
+ * The preset button for a theme: its preset's name, lowercased,
  * whether the theme is given by that name or by its site id (Top8 is
- * 'myspace'). An empty value, "Select a preset", when no preset matches.
+ * 'myspace'). '' when no preset matches, so no button is pressed.
  * @param {string} themeName - a preset name or a data-theme value
  * @returns {string}
  */
-function presetOptionValue(themeName) {
+function presetKey(themeName) {
 	const preset = findThemeEntry(PRESET_THEMES, themeName);
 	const name = Object.keys(PRESET_THEMES).find(key => PRESET_THEMES[key] === preset);
 	return name ? name.toLowerCase() : '';
@@ -33,13 +33,16 @@ function presetOptionValue(themeName) {
 
 /**
  * The global settings form's markup.
- * @returns {{preview: string, content: string}} HTML: the strip of preview
- *   nicks, and the form (filled in by buildSiteSettingsForm)
+ * @returns {{presets: string, preview: string, content: string}} HTML: the
+ *   preset buttons, the strip of preview nicks, and the rest of the form
+ *   (filled in by buildSiteSettingsForm). Apart, so the section can
+ *   put the presets and a line naming the preview between them
  */
 function siteSettingsMarkup() {
 	const eff = getEffectiveSiteConfig();
 	const theme = getThemeColors(null, 'hsl');
 	return {
+		presets: presetButtonsHtml(),
 		preview: `<div class="preview-row" data-settings-preview></div>
 			<div class="preview-row preview-inverted" data-settings-preview-inverted></div>`,
 		content: `
@@ -51,14 +54,6 @@ function siteSettingsMarkup() {
 				'Contrast Threshold': eff.contrastThreshold,
 				'Custom Colors Saved': Object.keys(customNickColors).length
 			})}
-			${createInputRow({
-				label: 'Preset Theme:',
-				// Page-unique: the dialog and the settings page section can both be open
-				id: uiId('settings-preset'),
-				type: 'select',
-				classes: 'nc-settings-preset',
-				options: `<option value="">-- Select a preset --</option>${Object.keys(PRESET_THEMES).map(name => `<option value="${name.toLowerCase()}">${name}</option>`).join('')}`
-			})}
 			<hr />
 			<div data-settings-engine></div>
 		`,
@@ -66,37 +61,32 @@ function siteSettingsMarkup() {
 }
 
 /**
- * Open the global settings dialog. Changes apply on Save.
- * Side effects: opens a dialog; Save writes siteConfig and recolors the page.
+ * The preset buttons, as the site's theme buttons on its Appearance tab,
+ * each in its own theme's colors (THEME_COLORS), and the Follow site theme
+ * switch beside their label. None is pressed until one is chosen, Reset to
+ * Preset picks one, or the switch follows the site theme's.
+ * @returns {string} HTML
  */
-function createSettingsPanel() {
-	const { preview, content } = siteSettingsMarkup();
-	let form = null;
-	const dialog = createDialog({
-		title: 'Nick Color Settings',
-		width: '400px',
-		onHelp: showHelpDialog,
-		preview,
-		content,
-		buttons: [
-			{ label: 'Save', class: 'save', onClick: (close) => {
-				form.save();
-				// The page section saves its whole form; it must not keep older values
-				refreshSettingsSection(SETTINGS_SECTION_KEY);
-				close();
-			}},
-			{ label: 'Reset', class: 'reset', onClick: () => form.reset() },
-			{ label: 'Cancel', class: 'cancel', onClick: (close) => close() }
-		]
-	});
-	form = buildSiteSettingsForm(dialog.el, {
-		// Reopen, so the form shows what was imported
-		onImported: () => {
-			dialog.close();
-			refreshSettingsSection(SETTINGS_SECTION_KEY);
-			createSettingsPanel();
-		},
-	});
+function presetButtonsHtml() {
+	// Page-unique: the dialog and the settings page section can both be open
+	const labelId = uiId('settings-preset');
+	const buttons = Object.keys(PRESET_THEMES).map(name => {
+		const colors = findThemeEntry(THEME_COLORS, name)?.colors;
+		const style = colors ? ` style="--${UI_PREFIX}-chip-fg: ${escapeHtml(colors.fg)}; --${UI_PREFIX}-chip-bg: ${escapeHtml(colors.bg)}"` : '';
+		return `
+		<button type="button" class="${uiClass('chip', 'chip-themed')}" data-preset="${escapeHtml(name.toLowerCase())}" aria-pressed="false"${style}>
+			<span>${escapeHtml(name)}</span>
+			<span class="${uiClass('chip-check')}" aria-hidden="true">✓</span>
+		</button>`;
+	}).join('');
+	return `
+		<div class="${uiClass('input-row-stacked')} nc-settings-preset">
+			<div class="${uiClass('flex', 'items-center', 'justify-between', 'gap-4')}">
+				<span id="${labelId}">Preset theme</span>
+				${createInputRow({ type: 'toggle', id: uiId('settings-follow-theme'), label: 'Follow site theme', checked: !!siteConfig.followSiteTheme, classes: 'nc-settings-follow-theme' })}
+			</div>
+			<div class="${uiClass('chip-row')}" role="group" aria-labelledby="${labelId}">${buttons}</div>
+		</div>`;
 }
 
 /**
@@ -106,11 +96,15 @@ function createSettingsPanel() {
  * @param {HTMLElement} body - the section body from registerSettingsSection
  */
 function renderSiteSettingsSection(body) {
-	const { preview, content } = siteSettingsMarkup();
+	const { presets, preview, content } = siteSettingsMarkup();
 	const resetId = uiId('nick-colors-reset');
 	body.innerHTML = `
-		<div class="hint">Changes save as you make them. Per-user colors: right-click a username and ${COLOR_MENU_HOWTO}.</div>
-		<div class="atmo-dialog-preview">${preview}</div>
+		<div class="hint">Changes save as you make them. Per-user colors: right-click a username and ${COLOR_MENU_HOWTO}.<br />
+		<br />
+		Select a Preset theme below to create a starting point to adjust colors from, or toggle on "Follow site theme" to have the preset follow you when you change your site's theme.</div>
+		${presets}
+		<div class="hint nc-settings-preview-label" data-settings-preview-label>Nick color examples on your theme's background and inverted, from your settings below.</div>
+		<div class="atmo-dialog-preview nc-settings-preview">${preview}</div>
 		${content}
 		<hr />
 		<div class="${uiClass('settings-section')}">
@@ -126,21 +120,86 @@ function renderSiteSettingsSection(body) {
 		</div>
 	`;
 	const form = buildSiteSettingsForm(body, {
-		autoSave: true,
 		onImported: () => renderSiteSettingsSection(body),
 	});
+	keepFocusClearOfPreview(body);
 	const resetButton = body.querySelector('#' + resetId);
-	// Above the color settings: it decides whose names they apply to
-	const friends = document.createElement('div');
-	body.querySelector('[data-settings-engine]').before(friends);
-	renderNickFriendsSettings(friends);
 	resetButton.addEventListener('click', () => confirmAction({
 		title: 'Reset to preset?',
 		message: `This puts the nick color settings back to the selected preset, or with none selected to the site theme's. Chooms, per-user colors, notes and the ${SETTINGS_TITLE} section stay.`,
 		confirmLabel: 'RESET',
 		tone: 'caution',
-		onConfirm: () => form.reset(),
+		onConfirm: () => {
+			form.reset();
+			// Answered after the section redrew (the theme changed meanwhile):
+			// the reset went to the old form, so show what it saved
+			if (!resetButton.isConnected) refreshSettingsSection(SETTINGS_SECTION_KEY);
+		},
 	}));
+}
+
+/**
+ * Keep a focused control out from under the stuck nick color examples.
+ * Focus moving up, as with Shift+Tab, scrolls the control to the top edge,
+ * where the examples stick, and they would hide it.
+ * Side effects: listens for focus in body, once, and marks it
+ * data-nc-focus-clear; scrolls the page, or the dialog, until a covered
+ * control's field and focus ring sit just below the examples.
+ * @param {HTMLElement} body - the section body renderSiteSettingsSection filled
+ */
+function keepFocusClearOfPreview(body) {
+	// An import redraws the same body: one listener is enough
+	if (body.dataset.ncFocusClear) return;
+	body.dataset.ncFocusClear = 'true';
+	body.addEventListener('focusin', (event) => {
+		const control = event.target;
+		// The browser scrolls a focused control into view after focusin, so
+		// measure where that leaves it
+		requestAnimationFrame(() => {
+			const preview = body.querySelector('.nc-settings-preview');
+			if (!preview || document.activeElement !== control) return;
+			// Only what comes after the examples scrolls under them
+			if (!(preview.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING)) return;
+			// A toggle or slider focuses a hidden input and draws its ring on
+			// the track or thumb: the field holds both
+			const field = control.closest('[data-field-key]') || control;
+			const examples = preview.getBoundingClientRect();
+			// Refocused, as when the window is, after scrolling away from it:
+			// above the examples, not under them
+			if (field.getBoundingClientRect().bottom <= examples.top) return;
+			const covered = examples.bottom - visibleTop(field);
+			if (covered > 0) scrollContainerOf(control).scrollTop -= covered;
+		});
+	});
+}
+
+/**
+ * The top of an element as drawn, with any outline in it, as a focus ring.
+ * @param {HTMLElement} element
+ * @returns {number} viewport y
+ */
+function visibleTop(element) {
+	let top = element.getBoundingClientRect().top;
+	for (const part of [element, ...element.querySelectorAll('*')]) {
+		const style = getComputedStyle(part);
+		if (!style.outlineStyle || style.outlineStyle === 'none') continue;
+		const outline = (parseFloat(style.outlineWidth) || 0) + (parseFloat(style.outlineOffset) || 0);
+		top = Math.min(top, part.getBoundingClientRect().top - outline);
+	}
+	return top;
+}
+
+/**
+ * The nearest ancestor that scrolls element: a dialog's content, or the page.
+ * @param {HTMLElement} element
+ * @returns {Element}
+ */
+function scrollContainerOf(element) {
+	for (let node = element.parentElement; node; node = node.parentElement) {
+		const { overflowY } = getComputedStyle(node);
+		if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) return node;
+	}
+	return document.scrollingElement || document.documentElement;
 }
 
 /**
@@ -164,16 +223,16 @@ function confirmClearCustomNickColors() {
 }
 
 /**
- * Wire up the global settings form in root: previews, the preset select,
+ * Wire up the global settings form in root: previews, the preset buttons,
  * and the settings engine.
- * Side effects: fills root's form; with autoSave, every change writes
- * siteConfig and recolors the page.
- * @param {HTMLElement} root - holds siteSettingsMarkup()'s preview and content
- * @param {{autoSave?: boolean, onImported: Function}} options - onImported:
- *   called after a successful import, to show the imported settings
+ * Side effects: fills root's form; every change writes siteConfig and
+ * recolors the page.
+ * @param {HTMLElement} root - holds siteSettingsMarkup()'s presets, preview and content
+ * @param {{onImported: Function}} options - onImported: called after a
+ *   successful import, to show the imported settings
  * @returns {{engine: Object, save: Function, reset: Function}}
  */
-function buildSiteSettingsForm(root, { autoSave = false, onImported }) {
+function buildSiteSettingsForm(root, { onImported }) {
 	const eff = getEffectiveSiteConfig();
 	const theme = getThemeColors(null, 'hsl');
 	const {
@@ -184,7 +243,23 @@ function buildSiteSettingsForm(root, { autoSave = false, onImported }) {
 	let ready = false;
 
 	const engineContainer = root.querySelector('[data-settings-engine]');
-	const presetSelect = root.querySelector('.nc-settings-preset select');
+	const presetButtons = Array.from(root.querySelectorAll('.nc-settings-preset [data-preset]'));
+	const followTheme = root.querySelector('.nc-settings-follow-theme input[type="checkbox"]');
+	// The site theme when this form opened: its ranges are that theme's
+	let formTheme = siteThemeName || '';
+	// Inside save(), choosing the new theme's preset saves again on the tab
+	let saving = false;
+	// The chosen preset's key, lowercased; '' for none, as the site theme
+	let selectedPreset = '';
+	/**
+	 * Show a preset as the chosen one.
+	 * Side effects: sets selectedPreset and each button's aria-pressed.
+	 * @param {string} key - from presetKey; '' for none
+	 */
+	const showPreset = (key) => {
+		selectedPreset = key;
+		for (const button of presetButtons) button.setAttribute('aria-pressed', String(button.dataset.preset === key));
+	};
 	const previewRow = root.querySelector('[data-settings-preview]');
 	const previewRowInverted = root.querySelector('[data-settings-preview-inverted]');
 
@@ -192,16 +267,34 @@ function buildSiteSettingsForm(root, { autoSave = false, onImported }) {
 	 * Store the form's values as siteConfig and recolor the page.
 	 */
 	function save() {
-		siteConfig = engine.getValues();
+		// Following, and the theme changed since this form opened (a dialog
+		// left open, a confirm answered after the section redrew): its ranges
+		// are the old theme's. Saving would put them back, so take the new
+		// theme's first
+		if (followTheme.checked && (siteThemeName || '') !== formTheme && !saving) {
+			formTheme = siteThemeName || '';
+			saving = true;
+			try {
+				choosePreset(presetKey(formTheme));
+			} finally {
+				saving = false;
+			}
+		}
+		// The switch is outside the engine's form
+		siteConfig = { ...engine.getValues(), followSiteTheme: followTheme.checked, followedTheme: followTheme.checked ? formTheme : '' };
 		saveSiteConfig();
 		colorizeAll();
 	}
 
 	/**
-	 * Reset the form to the selected preset theme (or the site theme if none).
+	 * Reset the form to the selected preset theme (or the site theme if none,
+	 * or while following it).
 	 */
 	function reset() {
-		const selectedTheme = presetSelect.value || siteThemeName || '';
+		// Following: the site theme's preset now, which may not be the one
+		// pressed when this form opened
+		if (followTheme.checked) formTheme = siteThemeName || '';
+		const selectedTheme = (followTheme.checked ? formTheme : selectedPreset) || siteThemeName || '';
 		const themeDefaults = getThemeDefaultSettings(selectedTheme);
 		const resetSettings = themeDefaults.settings;
 		const resetColors = themeDefaults.colorVariables;
@@ -215,7 +308,7 @@ function buildSiteSettingsForm(root, { autoSave = false, onImported }) {
 			singleColorSat: resetColors.fg?.s ?? resetSettings.singleColorSat,
 			singleColorLit: resetColors.fg?.l ?? resetSettings.singleColorLit,
 		}, true);
-		presetSelect.value = presetOptionValue(selectedTheme);
+		showPreset(presetKey(selectedTheme));
 		updatePreview();
 	}
 
@@ -337,6 +430,7 @@ function buildSiteSettingsForm(root, { autoSave = false, onImported }) {
 		defaults: defaultSettings,
 		onChange: (key, value) => {
 			// Handle special cases
+			if (key === 'useSingleColor' && value && ready) seedSingleColor();
 			if (key === 'useSiteThemeHue' || key === 'hueSpread') {
 				updateRangeFromSpread('hue');
 			}
@@ -348,12 +442,30 @@ function buildSiteSettingsForm(root, { autoSave = false, onImported }) {
 			}
 			updateGradients();
 			updatePreview();
-			if (autoSave && ready) save();
+			if (ready) save();
 		},
 		container: engineContainer
 	});
 
 	engine.render();
+
+	/**
+	 * Start monochrome on the site theme's text color, unless one was chosen.
+	 * Every save stores the single color, so a color still at
+	 * DEFAULT_SITE_CONFIG's cyan was never chosen, only saved.
+	 * Side effects: sets the form's single color, without saving it.
+	 */
+	function seedSingleColor() {
+		if (!theme.fg || engine.getFieldValue('singleColorCustom')) return;
+		const unchosen = ['singleColorHue', 'singleColorSat', 'singleColorLit']
+			.every(key => engine.getFieldValue(key) === DEFAULT_SITE_CONFIG[key]);
+		if (!unchosen) return;
+		engine.setValues({
+			singleColorHue: Math.round(theme.fg.h),
+			singleColorSat: Math.round(theme.fg.s),
+			singleColorLit: Math.round(theme.fg.l),
+		});
+	}
 
 	// Update range slider from spread value (when using site theme)
 	function updateRangeFromSpread(type) {
@@ -477,7 +589,7 @@ function buildSiteSettingsForm(root, { autoSave = false, onImported }) {
 		updateGradients();
 		const effConfig = getEffective();
 		// Use selected preset theme for preview, or fall back to site theme
-		const previewTheme = presetSelect.value || siteThemeName || '';
+		const previewTheme = selectedPreset || siteThemeName || '';
 
 		previewRow.querySelectorAll('.preview-nick').forEach((el, i) => {
 			const username = previewNames[i];
@@ -502,20 +614,40 @@ function buildSiteSettingsForm(root, { autoSave = false, onImported }) {
 	}
 
 	// Preset theme selection
-	presetSelect.addEventListener('change', () => {
-		const switchTheme = presetSelect.value;
-		const themeSettings = getThemeDefaultSettings(switchTheme);
-		if (themeSettings?.settings) {
-			const p = themeSettings.settings;
-			engine.setValues({
-				hueRange: [p.minHue, p.maxHue],
-				satRange: [p.minSaturation, p.maxSaturation],
-				litRange: [p.minLightness, p.maxLightness],
-				...contrastFields(p.contrastThreshold),
-			}, true);
-			updatePreview();
+	/**
+	 * Show a preset as chosen and put its ranges in the form.
+	 * Side effects: as showPreset; sets the form's ranges and contrast,
+	 * which saves them on the settings tab; redraws the preview.
+	 * @param {string} key - from presetKey; '' leaves the ranges alone
+	 */
+	const choosePreset = (key) => {
+		showPreset(key);
+		const ranges = presetRanges(key);
+		if (!ranges) return;
+		engine.setValues({
+			hueRange: [ranges.minHue, ranges.maxHue],
+			satRange: [ranges.minSaturation, ranges.maxSaturation],
+			litRange: [ranges.minLightness, ranges.maxLightness],
+			...contrastFields(ranges.contrastThreshold),
+		}, true);
+		updatePreview();
+	};
+	for (const button of presetButtons) button.addEventListener('click', () => {
+		// A preset chosen by hand: the next theme change must not replace it
+		if (followTheme.checked) {
+			followTheme.checked = false;
+			syncToggle(followTheme);
 		}
+		choosePreset(button.dataset.preset);
 	});
+	followTheme.addEventListener('change', () => {
+		syncToggle(followTheme);
+		formTheme = siteThemeName || '';
+		if (followTheme.checked) choosePreset(presetKey(formTheme));
+		// The switch itself, also where the site theme has no preset
+		if (ready) save();
+	});
+	if (followTheme.checked) showPreset(presetKey(siteThemeName));
 
 	// Override engine.getValues to return the right format for saving
 	const originalGetValues = engine.getValues.bind(engine);

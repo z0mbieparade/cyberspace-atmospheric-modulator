@@ -1,6 +1,6 @@
 {
   "name": "cyberspace-atmospheric-modulator",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Cyberspace Atmospheric Modulator: usability features for [Cyberspace](https://cyberspace.online): undithered images on hover, and colored usernames.",
   "main": "build.js",
   "scripts": {

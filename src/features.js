@@ -18,7 +18,8 @@ let featuresStarted = false;
  * @param {{key: string, boot: Function, onStorageReady?: function(boolean): void,
  *   exportBackup?: function(): Object, importBackup?: function(Object, boolean): {success: boolean, message: string},
  *   debugLog?: function(): string, reportSummary?: function(): string,
- *   resetSettings?: function(boolean): void, onSwitch?: function(boolean): void}} feature -
+ *   resetSettings?: function(boolean): void, onSwitch?: function(boolean): void,
+ *   renderSwitchDetail?: function(HTMLElement): void}} feature -
  *   key: its featureConfig switch; boot: start it, once the core has;
  *   onStorageReady: re-read its settings from storage: after async GM
  *   storage loads, and after an import stored new values (a backup, Import
@@ -33,7 +34,9 @@ let featuresStarted = false;
  *   of an issue report, one short line; resetSettings: put its settings and
  *   data back to their defaults, told whether the feature has booted;
  *   onSwitch: its switch changed in the settings form while it was booted,
- *   told whether it is on now. Without it, a feature turned off stops on reload
+ *   told whether it is on now. Without it, a feature turned off stops on reload;
+ *   renderSwitchDetail: draws a setting of its own just under its switch in
+ *   the script's main settings (featureSwitchDetail), shown while it is on
  */
 function registerFeature(feature) {
 	FEATURES.push({ ...feature, booted: false });
@@ -106,3 +109,27 @@ function featuresStorageReady() {
 	}
 	bootFeatures();
 }
+
+/**
+ * What a feature draws under its switch in the script's main settings: a
+ * setting that belongs beside the switch but lives in the feature's scope.
+ * Side effects: calls the feature's renderSwitchDetail into a new element.
+ * @param {string} key - the feature's key
+ * @returns {HTMLElement|null} null when the feature draws nothing there
+ */
+function featureSwitchDetail(key) {
+	const feature = FEATURES.find(f => f.key === key);
+	if (!feature?.renderSwitchDetail) return null;
+	const detail = document.createElement('div');
+	// Set in under the switch, as a schema field's `sub` is
+	detail.className = uiClass('sub-setting');
+	try {
+		feature.renderSwitchDetail(detail);
+	} catch (e) {
+		// The rest of the settings still render
+		console.error(LOG_PREFIX + ` Failed to draw ${key}'s settings:`, e);
+		return null;
+	}
+	return detail;
+}
+

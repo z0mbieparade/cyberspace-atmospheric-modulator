@@ -187,3 +187,29 @@ body[data-theme="poetry"]
 		--atmo-bare-color: var(--atmo-fg);
 	}
 }
+
+// The line naming the example nicks on the settings tab, set apart from the
+// preset buttons above it
+.nc-settings-preview-label {
+	margin-top: var(--spacing-sm);
+}
+
+// The examples stay in view while the settings under them scroll, to show
+// what each change does. Sticky only within the section, so they leave with
+// it. The code background is translucent, so the theme's own lies under it
+// to hide the settings scrolling behind
+.atmo-dialog-preview.nc-settings-preview {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: linear-gradient(var(--atmo-code-bg), var(--atmo-code-bg)), var(--atmo-bg);
+}
+
+// The site's main column hides sideways overflow, which makes it a scroll
+// container that never scrolls (the page does), so the examples would stick
+// to it and never move. Clipping hides the same overflow without that. Both
+// axes change: clip computes back to hidden beside auto
+.main:has(.nc-settings-preview) {
+	overflow-x: clip;
+	overflow-y: visible;
+}

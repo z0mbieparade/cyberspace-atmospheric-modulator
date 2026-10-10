@@ -16,6 +16,35 @@ function getThemeDefaultSettings(themeName)
 	};
 }
 
+/**
+ * A preset's color ranges and contrast, as siteConfig holds them: what
+ * choosing that preset changes.
+ * @param {string|null} themeName - a preset name or a data-theme value
+ * @returns {{minHue: number, maxHue: number, minSaturation: number, maxSaturation: number, minLightness: number, maxLightness: number, contrastThreshold: number}|null}
+ *   null when no preset matches
+ */
+function presetRanges(themeName) {
+	if (!findThemeEntry(PRESET_THEMES, themeName)) return null;
+	const { minHue, maxHue, minSaturation, maxSaturation, minLightness, maxLightness, contrastThreshold } = getThemeDefaultSettings(themeName).settings;
+	return { minHue, maxHue, minSaturation, maxSaturation, minLightness, maxLightness, contrastThreshold };
+}
+
+/**
+ * With Follow site theme on, take the site theme's preset ranges, when the
+ * theme is not the one last followed: a range edited by hand under the same
+ * theme stays. A theme with no preset (a custom one) leaves the ranges as
+ * they are.
+ * Side effects: may update siteConfig and save it.
+ * @returns {boolean} whether the settings changed
+ */
+function followSiteThemePreset() {
+	const theme = siteThemeName || '';
+	if (!siteConfig.followSiteTheme || siteConfig.followedTheme === theme) return false;
+	Object.assign(siteConfig, presetRanges(theme) || {}, { followedTheme: theme });
+	saveSiteConfig();
+	return true;
+}
+
 // Convert kebab-case to camelCase
 function toCamelCase(str) {
 	return str.replace(/-([a-z])/g, (_, p1) => p1.toUpperCase());

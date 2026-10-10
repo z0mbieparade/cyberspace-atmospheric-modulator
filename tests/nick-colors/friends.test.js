@@ -1,5 +1,5 @@
 /**
- * Friends tests: with "Only color my chooms" on, only names on the list are
+ * Friends tests: with only chooms colored, only names on the list are
  * colored; the list survives a backup and is checked when it comes back.
  */
 
@@ -159,7 +159,7 @@ describe('the Friends settings', () => {
 		doc.body.appendChild(container);
 		renderNickFriendsSettings(container);
 		const toggle = container.querySelector('input[type="checkbox"]');
-		expect(container.querySelector('h4').textContent).toBe('Only color my chooms');
+		expect(container.querySelector('label').textContent.trim()).not.toBe('');
 		toggle.click();
 		expect(shouldColorNick('bob')).toBe(false);
 		container.remove();

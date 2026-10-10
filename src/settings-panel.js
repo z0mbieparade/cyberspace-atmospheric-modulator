@@ -43,22 +43,22 @@ function warningBox(text) {
 // This script's section of the site's Settings > AtmoMod tab
 const SETTINGS_SECTION_KEY = 'atmospheric-modulator';
 
-// The form, in order. Keys match featureConfig. The settings dialog adds
-// backupSchema() (backup.js), which holds debugMode
+// The form, in order. Keys match featureConfig. Debug mode is in Backup &
+// Troubleshooting's form (backupSchema, backup.js)
 const SETTINGS_SCHEMA = [
 	{ type: 'section', label: 'Undither images', fields: [
 		{ key: 'unditherImages', type: 'toggle', label: 'Show original image on hover', default: DEFAULT_FEATURE_CONFIG.unditherImages },
 		{ key: 'holdDuration', type: 'slider', label: 'Press-and-hold time on touch screens (ms)',
 			min: 100, max: 2000, step: 50, default: DEFAULT_FEATURE_CONFIG.holdDuration,
-			showWhen: { field: 'unditherImages', is: true } },
+			showWhen: { field: 'unditherImages', is: true }, sub: true },
 		{ key: 'unditherWarning', type: 'custom', showWhen: { field: 'unditherImages', is: true }, render: () => {
 			if (!unditherCannotWork()) return null;
 			return warningBox('Your userscript manager runs scripts apart from the page, so hovering cannot show original images. It works in Tampermonkey and Greasemonkey.');
 		} },
 	]},
 	{ type: 'section', label: 'Nick colors', fields: [
-		{ key: 'nickColors', type: 'toggle', label: 'Give every username its own color', default: DEFAULT_FEATURE_CONFIG.nickColors },
-		{ type: 'hint', text: 'Every user gets a hashed (same everywhere) color applied to their nickname. Turning it off hides its settings and its menu item, and takes the colors off every name, at once.' },
+		{ key: 'nickColors', type: 'toggle', label: 'Usernames get their own color', default: DEFAULT_FEATURE_CONFIG.nickColors },
+		{ type: 'hint', text: 'Usernames get hashed (same everywhere) colors applied to their nickname.' },
 		// The separate script draws its styles into #nc-styles. With both
 		// running, each refresh recolors every name with its own settings (see
 		// DEFAULT_FEATURE_CONFIG)
@@ -66,10 +66,13 @@ const SETTINGS_SCHEMA = [
 			if (!standaloneNickColorsRunning()) return null;
 			return warningBox('The separate Nick Colors userscript is running too. Turn one of them off.');
 		} },
+		// Only my chooms, from nick colors' scope. After the switch's own hint
+		// and warning, so each description stays under its own switch
+		{ key: 'nickColorsDetail', type: 'custom', showWhen: { field: 'nickColors', is: true }, render: () => featureSwitchDetail('nickColors') },
 	]},
 	{ type: 'section', label: 'Nick notes', fields: [
-		{ key: 'nickNotes', type: 'toggle', label: 'Keep personal notes on users, shown on hover', default: DEFAULT_FEATURE_CONFIG.nickNotes },
-		{ type: 'hint', text: 'Right-click or long-press a name and choose Notes. Turning it off hides Notes from the menu at once; notes on hover stay until the page reloads.' },
+		{ key: 'nickNotes', type: 'toggle', label: 'Keep personal (private) notes on users, shown on hover', default: DEFAULT_FEATURE_CONFIG.nickNotes },
+		{ type: 'hint', text: 'Right-click or long-press a name and choose Notes. The CHOOMS section below shows all of your user notes.' },
 	]},
 	{ type: 'section', label: 'World clock', fields: [
 		{ key: 'worldClock', type: 'toggle', label: 'Show city times under cIRC\'s header', default: DEFAULT_FEATURE_CONFIG.worldClock },
@@ -87,23 +90,17 @@ function settingsField(key) {
 }
 
 /**
- * Store the form's values: featureConfig, and debugMode when the form has it.
- * Side effects: updates featureConfig in place (other code holds it) and
- * DEBUG, writes them to storage, tells booted features their switch
+ * Store the main section's values as featureConfig.
+ * Side effects: updates featureConfig in place (other code holds it),
+ * writes it to storage, tells booted features their switch
  * changed (featuresSwitched), boots any feature just turned on, and
  * shows or hides the settings tab's sections that follow a switch.
  * @param {Object} values - from the settings engine's getValues()
  */
 function applySettings(values) {
-	const { debugMode, ...features } = values;
 	const previous = { ...featureConfig };
-	Object.assign(featureConfig, features);
+	Object.assign(featureConfig, values);
 	saveFeatureConfig();
-	// The settings tab's main section has no debugMode: it is in Backup & Troubleshooting
-	if (debugMode !== undefined) {
-		DEBUG = debugMode;
-		saveDebugMode();
-	}
 	// A booted feature hears its switch change; one turned on starts now
 	featuresSwitched(previous);
 	bootFeatures();
@@ -117,7 +114,7 @@ function applySettings(values) {
  * Render the settings form with the current values.
  * Side effects: fills container.
  * @param {HTMLElement} container
- * @param {Array} schema - SETTINGS_SCHEMA, or it plus page-only fields
+ * @param {Array} schema - SETTINGS_SCHEMA, or Backup & Troubleshooting's (backupSchema)
  * @param {Function} [onChange] - called with (key, value, engine) on every change
  * @returns {Object} the settings engine
  */
@@ -133,34 +130,29 @@ function renderSettingsForm(container, schema, onChange) {
 }
 
 /**
- * Open the settings dialog. Changes apply on Save.
- * Side effects: opens a dialog; Save writes featureConfig and debugMode to storage.
+ * Open the settings dialog: the settings tab's sections, drawn by the same
+ * code, saving each change as it is made, as the tab does. The dialog's
+ * footer carries the warning and attribution the tab shows at its top.
+ * Side effects: opens a dialog; its sections follow every change, as the
+ * tab's do, while it is open; closing it redraws the tab's sections.
+ * @param {string} [focusKey] - a section to unfold and move focus to, as
+ *   given to registerSettingsSection
  */
-function openSettingsPanel() {
-	let engine = null;
-	// Reopen, so the form shows the settings after an import or an erase
-	const reopen = () => {
-		dialog.close();
-		openSettingsPanel();
-	};
+function openSettingsPanel(focusKey) {
 	const dialog = createDialog({
 		title: SETTINGS_TITLE,
-		content: `<div class="${uiClass('settings-engine')}"></div>`,
+		width: '600px',
+		// The tab's copies, out of reach behind the dialog meanwhile, show
+		// what changed in it
+		onClose: refreshSettingsTabSections,
+		content: `<div class="${uiClass('settings-dialog-sections')}"></div>`,
 		buttons: [
-			{ label: 'Save', class: 'save', onClick: (close) => {
-				applySettings(engine.getValues());
-				// The page section saves its whole form; it must not keep older values
-				refreshSettingsSection(SETTINGS_SECTION_KEY);
-				close();
-			} },
-			{ label: 'Reset', class: 'reset', onClick: () => engine.reset() },
-			{ label: 'Cancel', class: 'cancel', onClick: (close) => close() },
+			{ label: 'Close', class: 'cancel', onClick: (close) => close() },
 		],
 	});
-	engine = renderSettingsForm(dialog.querySelector('.' + uiClass('settings-engine')), [
-		...SETTINGS_SCHEMA,
-		...backupSchema({ onImported: reopen, onErased: reopen }),
-	]);
+	const host = dialog.querySelector('.' + uiClass('settings-dialog-sections'));
+	renderSettingsSections(host);
+	if (focusKey) focusSettingsSection(focusKey, host);
 }
 
 /**

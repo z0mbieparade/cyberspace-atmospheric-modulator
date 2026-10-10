@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 Each version starts with a one-line summary, a `>` line under its heading. The update banner shows it to users of older versions as plain text, not markdown: keep it to one line of at most 160 characters, written for them, without `**` or links. A longer one is cut.
 
+## [0.2.6] - 2026-10-10
+
+> Added: Follow site theme. Changed: preset theme buttons, sticky nick examples, one settings dialog. Fixed: sidebar and /me names, monochrome color.
+
+### Added
+- **Follow site theme** - a Nick Colors switch, off by default, that changes the preset with your site theme
+
+### Changed
+- **Preset theme buttons** - Nick Colors picks its preset from a row of buttons, each in its theme's colors, as the site's Appearance tab picks a theme, instead of a dropdown
+- **Only my ★ chooms get their own color moves to the main settings** - renamed from Only color my chooms, it sits under nick colors' own switch, renamed Usernames get their own color, in the Atmospheric Modulator Settings section
+- **The settings dialog is the settings tab** - the Atmospheric Modulator Settings menu command shows every section of Settings > AtmoMod, drawn by the same code and saving as you change, with Close in place of Save and Cancel. Nick Colors Settings opens it at Nick Colors
+- **Nick color examples stay in view** - on the settings tab and in the dialog, they stick to the top while the Nick Colors settings scroll under them. A control you move focus to is scrolled out from under them
+
+### Fixed
+- **Names in cIRC popped out into the sidebar went uncolored** - a name linked rather than @mentioned, as in a /me line, is colored there too, on any page
+- **Names in a cIRC /me line were upright** - a name in an action line stays italic, like the rest of the line, whatever its own style sets
+- **Monochrome started on cyan** - switched on, it starts on the site theme's text color, unless you already chose one
+
 ## [0.2.5] - 2026-10-08
 
 > Added: Save your settings to a private Cyberspace note + CHANGELOG section. Fixed: World Clock settings not saving in Tampermonkey.

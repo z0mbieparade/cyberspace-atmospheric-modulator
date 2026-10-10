@@ -67,7 +67,8 @@ runAndExpose(code, [
 	'hashString',
 	'getThemeColors',
 	'getThemeDefaultSettings',
-	'presetOptionValue',
+	'presetKey',
+	'presetButtonsHtml',
 	'compareVersions',
 	'isNewerVersion',
 

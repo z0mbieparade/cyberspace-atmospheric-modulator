@@ -27,6 +27,9 @@ const SETTINGS_SAVED_CLASS_ATTR = `data-${UI_PREFIX}-settings-class`;
 
 // This script's sections: { key, title, description, order, startsOpen, render(container) }
 const settingsSections = [];
+// Settings dialogs showing the sections (renderSettingsSections), besides
+// the tab's panel
+const settingsSectionHosts = new Set();
 // Which of this script's sections are folded open, by key: kept in GM storage,
 // so each stays the way the user left it. Requires 'settingsSectionsOpen' in
 // GM_STORAGE_KEYS
@@ -225,15 +228,143 @@ function saveSettingsSectionOpen(key, isOpen) {
 }
 
 /**
- * Re-render one of this script's sections from the current settings, after
- * they were saved elsewhere (a dialog). A section that auto-saves its whole
+ * Put this script's shown sections in host, in order, and take out the
+ * ones no longer shown: the settings tab's panel, or a settings dialog
+ * (renderSettingsSections), built the same way in both.
+ * Side effects: adds, renders, folds or removes section elements in host.
+ * @param {HTMLElement} host
+ */
+function syncSettingsSections(host) {
+	for (const section of settingsSections) {
+		const existing = host.querySelector(`[${SETTINGS_SECTION_ATTR}="${section.key}"]`);
+		const shown = !section.isShown || section.isShown();
+		if (!shown) {
+			existing?.remove();
+			continue;
+		}
+		if (existing) {
+			if (!existing.hasAttribute(SETTINGS_FOLD_SYNCED_ATTR) && isGMStorageReady()) {
+				setSettingsSectionOpen(existing, settingsSectionShouldBeOpen(section));
+				existing.setAttribute(SETTINGS_FOLD_SYNCED_ATTR, '');
+			}
+			continue;
+		}
+		// The site's own settings box and heading; our styles apply only
+		// inside the body, so the heading keeps the site's look
+		const el = document.createElement('section');
+		el.setAttribute(SETTINGS_SECTION_ATTR, section.key);
+		const order = section.order ?? 0;
+		el.setAttribute(SETTINGS_SECTION_ORDER_ATTR, String(order));
+		el.className = 'terminal-box p-4 mb-3';
+		// The site's heading, holding a button that folds the section under it:
+		// the page holds several long sections. A heading inside <summary>
+		// would lose its heading role, so this is the disclosure pattern
+		const heading = document.createElement('h3');
+		// The site tightens the gap when a description follows
+		heading.className = `text-xs ${section.description ? 'mb-2' : 'mb-3'} uppercase tracking-wider`;
+		const toggle = document.createElement('button');
+		toggle.type = 'button';
+		toggle.className = uiClass('settings-fold');
+		const marker = document.createElement('span');
+		marker.className = uiClass('settings-fold-marker');
+		marker.setAttribute('aria-hidden', 'true');
+		const title = document.createElement('span');
+		title.textContent = section.title;
+		toggle.append(marker, title);
+		// Decorative, before the title: the script's own HTML
+		if (section.icon) title.insertAdjacentHTML('beforebegin', section.icon);
+		heading.append(toggle);
+		el.append(heading);
+		const fold = document.createElement('div');
+		fold.id = uiId('settings-fold');
+		toggle.setAttribute('aria-controls', fold.id);
+		if (section.description) {
+			// The site's own description style, as under its settings headings
+			const description = document.createElement('p');
+			description.className = 'text-fg-dim text-sm mb-3';
+			description.textContent = section.description;
+			fold.append(description);
+		}
+		const body = document.createElement('div');
+		body.className = uiClass('panel');
+		fold.append(body);
+		el.append(fold);
+		// Until storage loads (async GM storage), the saved state is unknown:
+		// the default for now, and the saved one once syncSettingsPage runs again
+		setSettingsSectionOpen(el, settingsSectionShouldBeOpen(section));
+		if (isGMStorageReady()) el.setAttribute(SETTINGS_FOLD_SYNCED_ATTR, '');
+		toggle.addEventListener('click', () => {
+			settingsSectionsOpenedByLink.delete(section.key);
+			const open = toggle.getAttribute('aria-expanded') !== 'true';
+			setSettingsSectionOpen(el, open);
+			saveSettingsSectionOpen(section.key, open);
+		});
+		// Sorted by order, then key, so every script inserts in the same order
+		const next = Array.from(host.children).find((other) => {
+			const otherKey = other.getAttribute(SETTINGS_SECTION_ATTR);
+			if (otherKey === null) return false;
+			const otherOrder = Number(other.getAttribute(SETTINGS_SECTION_ORDER_ATTR)) || 0;
+			return otherOrder > order || (otherOrder === order && otherKey > section.key);
+		});
+		host.insertBefore(el, next || null);
+		section.render(body);
+	}
+}
+
+/**
+ * Show this script's sections in host, as the settings tab shows them,
+ * and keep them in step with it while host is on the page.
+ * Side effects: renders the sections into host; syncSettingsPage then
+ * updates it too, until host leaves the page.
+ * @param {HTMLElement} host - e.g. a dialog's content
+ */
+function renderSettingsSections(host) {
+	settingsSectionHosts.add(host);
+	syncSettingsSections(host);
+}
+
+/**
+ * Re-render one of this script's sections, every copy of it, from the
+ * current settings: after they changed outside it, as an import or a theme
+ * change does. Not from a change made in the section itself: that would
+ * redraw the form being used and drop its focus. A section that auto-saves its whole
  * form would otherwise write back the values it read when it rendered.
  * Side effects: replaces the section, when it is on the page.
  * @param {string} key - as given to registerSettingsSection
  */
 function refreshSettingsSection(key) {
-	document.querySelector(`[${SETTINGS_SECTION_ATTR}="${key}"]`)?.remove();
+	// On the tab and in an open dialog alike
+	document.querySelectorAll(`[${SETTINGS_SECTION_ATTR}="${key}"]`).forEach(el => el.remove());
 	syncSettingsPage();
+}
+
+/**
+ * Redraw this script's sections on the settings tab from the current
+ * settings: after a settings dialog closed, whose changes they do not show
+ * yet. While the dialog was open its overlay kept them out of reach, so
+ * they could not write older values back meanwhile. Another script's
+ * sections in the shared panel are left alone. Focus in a redrawn section
+ * goes back to the same field, else to the section's fold button.
+ * Side effects: replaces this script's sections on the tab, when it is on
+ * the page; may move focus.
+ */
+function refreshSettingsTabSections() {
+	const panel = document.getElementById(SETTINGS_PANEL_ID);
+	if (!panel) return;
+	const ours = new Set(settingsSections.map(section => section.key));
+	// Where focus is, as the dialog's close just put it back
+	const active = document.activeElement;
+	const focusedSection = panel.contains(active) ? active.closest(`[${SETTINGS_SECTION_ATTR}]`) : null;
+	const focusKey = focusedSection?.getAttribute(SETTINGS_SECTION_ATTR);
+	const fieldKey = focusedSection ? active.closest('[data-field-key]')?.dataset.fieldKey : undefined;
+	panel.querySelectorAll(`[${SETTINGS_SECTION_ATTR}]`).forEach(el => {
+		if (ours.has(el.getAttribute(SETTINGS_SECTION_ATTR))) el.remove();
+	});
+	syncSettingsPage();
+	if (!focusKey || !ours.has(focusKey)) return;
+	const section = panel.querySelector(`[${SETTINGS_SECTION_ATTR}="${focusKey}"]`);
+	const field = fieldKey && section?.querySelector(`[data-field-key="${fieldKey}"] :is(input, select, textarea, button)`);
+	(field || (section && settingsSectionFoldButton(section)))?.focus();
 }
 
 // A section to scroll to once it renders, after openSettingsSection had to
@@ -312,10 +443,11 @@ function readPendingFocus() {
  * saved states load, and saves it open once storage is ready, as a click
  * would; makes the heading focusable from script (tabIndex -1), scrolls, and moves focus.
  * @param {string} key
+ * @param {ParentNode} [root] - where to look: a settings dialog, else the page
  * @returns {boolean} whether the section is shown and was focused
  */
-function focusSettingsSection(key) {
-	const heading = document.querySelector(`[${SETTINGS_SECTION_ATTR}="${key}"] > h3`);
+function focusSettingsSection(key, root = document) {
+	const heading = root.querySelector(`[${SETTINGS_SECTION_ATTR}="${key}"] > h3`);
 	// A heading in the closed panel cannot take focus
 	if (!heading || heading.closest('[hidden]')) return false;
 	const section = heading.parentElement;
@@ -400,6 +532,11 @@ function siteTabClass(link) {
  * @param {boolean} [active] - override, for a navigation the URL does not show yet
  */
 function syncSettingsPage(active = location.pathname.startsWith('/settings/') && location.hash === settingsTabHash()) {
+	// The sections in an open settings dialog follow too, on any page
+	for (const host of settingsSectionHosts) {
+		if (host.isConnected) syncSettingsSections(host);
+		else settingsSectionHosts.delete(host);
+	}
 	const bars = findSettingsTabBars();
 	if (!bars.length) return;
 
@@ -521,80 +658,7 @@ function syncSettingsPage(active = location.pathname.startsWith('/settings/') &&
 		}
 	}
 
-	for (const section of settingsSections) {
-		const existing = panel.querySelector(`[${SETTINGS_SECTION_ATTR}="${section.key}"]`);
-		const shown = !section.isShown || section.isShown();
-		if (!shown) {
-			existing?.remove();
-			continue;
-		}
-		if (existing) {
-			if (!existing.hasAttribute(SETTINGS_FOLD_SYNCED_ATTR) && isGMStorageReady()) {
-				setSettingsSectionOpen(existing, settingsSectionShouldBeOpen(section));
-				existing.setAttribute(SETTINGS_FOLD_SYNCED_ATTR, '');
-			}
-			continue;
-		}
-		// The site's own settings box and heading; our styles apply only
-		// inside the body, so the heading keeps the site's look
-		const el = document.createElement('section');
-		el.setAttribute(SETTINGS_SECTION_ATTR, section.key);
-		const order = section.order ?? 0;
-		el.setAttribute(SETTINGS_SECTION_ORDER_ATTR, String(order));
-		el.className = 'terminal-box p-4 mb-3';
-		// The site's heading, holding a button that folds the section under it:
-		// the page holds several long sections. A heading inside <summary>
-		// would lose its heading role, so this is the disclosure pattern
-		const heading = document.createElement('h3');
-		// The site tightens the gap when a description follows
-		heading.className = `text-xs ${section.description ? 'mb-2' : 'mb-3'} uppercase tracking-wider`;
-		const toggle = document.createElement('button');
-		toggle.type = 'button';
-		toggle.className = uiClass('settings-fold');
-		const marker = document.createElement('span');
-		marker.className = uiClass('settings-fold-marker');
-		marker.setAttribute('aria-hidden', 'true');
-		const title = document.createElement('span');
-		title.textContent = section.title;
-		toggle.append(marker, title);
-		// Decorative, before the title: the script's own HTML
-		if (section.icon) title.insertAdjacentHTML('beforebegin', section.icon);
-		heading.append(toggle);
-		el.append(heading);
-		const fold = document.createElement('div');
-		fold.id = uiId('settings-fold');
-		toggle.setAttribute('aria-controls', fold.id);
-		if (section.description) {
-			// The site's own description style, as under its settings headings
-			const description = document.createElement('p');
-			description.className = 'text-fg-dim text-sm mb-3';
-			description.textContent = section.description;
-			fold.append(description);
-		}
-		const body = document.createElement('div');
-		body.className = uiClass('panel');
-		fold.append(body);
-		el.append(fold);
-		// Until storage loads (async GM storage), the saved state is unknown:
-		// the default for now, and the saved one once syncSettingsPage runs again
-		setSettingsSectionOpen(el, settingsSectionShouldBeOpen(section));
-		if (isGMStorageReady()) el.setAttribute(SETTINGS_FOLD_SYNCED_ATTR, '');
-		toggle.addEventListener('click', () => {
-			settingsSectionsOpenedByLink.delete(section.key);
-			const open = toggle.getAttribute('aria-expanded') !== 'true';
-			setSettingsSectionOpen(el, open);
-			saveSettingsSectionOpen(section.key, open);
-		});
-		// Sorted by order, then key, so every script inserts in the same order
-		const next = Array.from(panel.children).find((other) => {
-			const otherKey = other.getAttribute(SETTINGS_SECTION_ATTR);
-			if (otherKey === null) return false;
-			const otherOrder = Number(other.getAttribute(SETTINGS_SECTION_ORDER_ATTR)) || 0;
-			return otherOrder > order || (otherOrder === order && otherKey > section.key);
-		});
-		panel.insertBefore(el, next || null);
-		section.render(body);
-	}
+	syncSettingsSections(panel);
 
 	// Arrived from openSettingsSection on another page
 	const pending = readPendingFocus();

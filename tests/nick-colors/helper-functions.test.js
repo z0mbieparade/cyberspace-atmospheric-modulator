@@ -252,10 +252,25 @@ describe('getThemeDefaultSettings for a theme stored under another id', () => {
 		expect(getThemeDefaultSettings('myspace').settings.maxLightness).toBe(25);
 	});
 
-	it('selects Top8 in the preset select for data-theme="myspace"', () => {
-		expect(presetOptionValue('myspace')).toBe('top8');
-		expect(presetOptionValue('brutalist')).toBe('brutalist');
-		expect(presetOptionValue('nonesuch')).toBe('');
+	it('presses Top8\'s preset button for data-theme="myspace"', () => {
+		expect(presetKey('myspace')).toBe('top8');
+		expect(presetKey('brutalist')).toBe('brutalist');
+		expect(presetKey('nonesuch')).toBe('');
+	});
+});
+
+describe('the preset buttons', () => {
+	it('draws each in its own theme\'s colors', () => {
+		const root = document.createElement('div');
+		root.innerHTML = presetButtonsHtml();
+		const light = root.querySelector('[data-preset="light"]');
+		expect(light.style.getPropertyValue('--atmo-chip-fg')).toBe('#000000');
+		expect(light.style.getPropertyValue('--atmo-chip-bg')).toBe('#efe5c0');
+		// The script's own presets too
+		expect(root.querySelector('[data-preset="z0ylent"]').style.getPropertyValue('--atmo-chip-fg')).toBe('#91ff00');
+		expect(root.querySelectorAll('[data-preset]:not([style])')).toHaveLength(0);
+		// Ringed in the panel's color, so no theme's colors hide the edge
+		expect(root.querySelectorAll('[data-preset]:not(.atmo-chip-themed)')).toHaveLength(0);
 	});
 });
 

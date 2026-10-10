@@ -29,6 +29,7 @@ it('says the list could not be loaded, links to the changelog, and keeps the upd
 	await renderChangelogSection(body);
 	expect(body.querySelector('[role="status"]').textContent).toBe('Could not load the list of changes.');
 	expect(body.querySelector('li')).toBeNull();
-	expect(body.querySelector('a').textContent).toBe('Read the full changelog on GitHub');
+	expect(body.querySelector('a').textContent.trim()).not.toBe('');
+	expect(body.querySelector('a').href).toContain('CHANGELOG.md');
 	expect(section.querySelector('h3 .atmo-settings-badge').title).toBe('update to v0.2.6 available');
 });

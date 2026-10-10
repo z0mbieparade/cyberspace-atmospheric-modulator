@@ -5,7 +5,7 @@
 // friends. The saved keys say friends too, and must stay so: 'nickFriends'
 // in GM storage and in settings files is published in users' saves, and a
 // rename would empty every saved list and every older backup's.
-// With "Only color my chooms" on, a name is colored only while its user is
+// With only chooms colored (the switch under nick colors' own), a name is colored only while its user is
 // on the list: no hashed color, custom color or site-wide override for
 // anyone else. A custom color stays saved when its user leaves the list, and
 // comes back when they rejoin. Kept apart from siteConfig, so Reset to
@@ -13,7 +13,7 @@
 
 // How to reach a name's Color dialog, either way the switch is: for the
 // settings hint, the help dialog and the console
-const COLOR_MENU_HOWTO = 'choose Color, or while only chooms are colored, Add Color and then Edit Color';
+const COLOR_MENU_HOWTO = 'choose Color, or while only ★ chooms are colored, "Add Color" and then "Edit Color"';
 
 // { enabled: boolean, users: usernames in the site's case, as colors and
 // notes are saved under them; compared without case }
@@ -100,7 +100,7 @@ function setNickFriend(username, friend) {
 }
 
 /**
- * Turn "Only color my chooms" on or off. Turned on with nobody on the list,
+ * Turn only-chooms coloring on or off. Turned on with nobody on the list,
  * the signed-in user becomes the first friend, so their own name stays colored.
  * Side effects: saves it; restyles every name; may add the signed-in user
  * (addOwnNameAsFirstFriend).
@@ -137,19 +137,21 @@ async function addOwnNameAsFirstFriend(lookup = fetchOwnUsername) {
 }
 
 /**
- * The Friends part of the Nick Colors settings: the switch. The Users
- * section's star adds and removes friends.
- * Side effects: renders into container; the switch turns the mode on or off.
+ * The Only my chooms switch, under nick colors' own switch in the script's
+ * main settings (renderSwitchDetail). The Users section's star adds and
+ * removes friends.
+ * Side effects: renders into container; the switch turns the mode on or
+ * off at once, as every setting there saves as it is made.
  * @param {HTMLElement} container
  */
 function renderNickFriendsSettings(container) {
 	const engine = createSettingsEngine({
 		container,
 		values: { onlyColorFriends: nickFriends.enabled },
-		schema: [{ type: 'section', label: 'Only color my chooms', fields: [
-			{ key: 'onlyColorFriends', type: 'toggle', label: 'Only starred users get nick colors', default: false },
-			{ type: 'hint', text: 'Leaves everyone else in the site\'s colors. Turned on with nobody listed, it adds you first. While it is on, right-click or long-press a username and choose Add Color to add a choom; the Chooms section further down this tab lists them.' },
-		] }],
+		schema: [
+			{ key: 'onlyColorFriends', type: 'toggle', label: 'Only my ★ chooms get their own color', default: false },
+			{ type: 'hint', text: 'Everyone else keeps the site\'s default colors. While on, right-click or long-press a username and choose "Add Color" to add a choom; the CHOOMS section lists them below.' },
+		],
 		onChange: (key, value) => {
 			if (key === 'onlyColorFriends') setOnlyColorFriends(value);
 		},

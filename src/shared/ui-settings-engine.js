@@ -11,6 +11,8 @@
  *
  * Field types: toggle, tristate, slider, range, text, textarea, select,
  * button, custom (def.render), hint, hr; and section, which nests fields.
+ * A field with `sub: true` is drawn set in (.sub-setting), as part of the
+ * switch above it, usually beside a showWhen on that switch.
  * @param {Object} opts
  * @param {Array} opts.schema - field and section definitions
  * @param {Object} [opts.values] - initial values by key
@@ -172,7 +174,7 @@ function createSettingsEngine(opts) {
 
 		// Create wrapper for the field
 		const wrapper = document.createElement('div');
-		wrapper.className = uiClass('settings-field');
+		wrapper.className = def.sub ? uiClass('settings-field', 'sub-setting') : uiClass('settings-field');
 		if (key) wrapper.dataset.fieldKey = key;
 
 		// Get initial value

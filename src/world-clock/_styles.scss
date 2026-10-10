@@ -26,50 +26,6 @@
 	}
 }
 
-// The city buttons wrap in rows
-.atmo-world-clock-cities {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--spacing-xs);
-}
-
-// A city to show or not: outlined, and filled while chosen. The
-// site inverts a hovered, focused or pressed button, from rules of unknown
-// weight, and the panel sizes every button; a city keeps focus after a
-// click, so without these it would look chosen until focus moved
-.atmo-panel .atmo-world-clock-pick {
-	flex: none;
-	padding: 0.25rem 0.5rem;
-	font: inherit;
-	font-size: calc(var(--font-size-base, 1rem) * 0.875);
-	border: 1px solid var(--atmo-fg);
-	border-radius: 0.125rem;
-	cursor: pointer;
-
-	&,
-	&:hover,
-	&:focus,
-	&:active {
-		background: transparent !important;
-		color: var(--atmo-fg) !important;
-	}
-
-	// The panel dims a hovered button's edge, below the 3:1 a control's edge
-	// needs on some themes
-	&:hover {
-		border-color: var(--atmo-fg);
-		text-decoration: underline;
-	}
-
-	&[aria-pressed="true"],
-	&[aria-pressed="true"]:hover,
-	&[aria-pressed="true"]:focus,
-	&[aria-pressed="true"]:active {
-		background: var(--atmo-fg) !important;
-		color: var(--atmo-bg) !important;
-	}
-}
-
 // A name and a time zone on one line, wrapping on a narrow screen; Add and
 // the message under them each take a line of their own
 .atmo-world-clock-add {

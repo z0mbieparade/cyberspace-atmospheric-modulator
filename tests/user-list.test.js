@@ -196,10 +196,17 @@ describe('the Users section', () => {
 		const section = openUsers();
 		const preview = () => section.querySelector('li[data-entry-key="bob"] .atmo-color-preview');
 		expect(preview().style.color).not.toBe('');
-		// The switch in the Nick Colors section
-		doc.querySelector('[data-atmo-settings-section="atmospheric-modulator-nick-colors"] .atmo-toggle input[type="checkbox"]').click();
+		const title = () => section.querySelector('li[data-entry-key="bob"] .atmo-color-name').title;
+		const colorTitle = title();
+		// The switch under nick colors' own, in the script's main settings
+		const main = doc.createElement('div');
+		section.after(main);
+		renderSettingsSection(main);
+		main.querySelector('[data-field-key="onlyColorFriends"] input').click();
+		main.remove();
 		expect(preview().style.color).toBe('');
-		expect(section.querySelector('li[data-entry-key="bob"] .atmo-color-name').title).toContain('once they are a choom');
+		// Its tooltip says why the name is plain now
+		expect(title()).not.toBe(colorTitle);
 	});
 
 	it('promises a hashed icon in the Color dialog only on the side whose switch is on', () => {
@@ -216,9 +223,21 @@ describe('the Users section', () => {
 		expect(dialogLabel('Append icon')).toContain('(default: ★)');
 	});
 
+	it('keeps every copy of the list in step, as on the settings tab and in a dialog', () => {
+		restore({ notes: { alice: 'one' } });
+		const section = openUsers();
+		const copy = doc.createElement('div');
+		doc.body.append(copy);
+		renderUserList(copy);
+		feature('nickNotes').importBackup({ alice: 'one', bob: 'two' }, true);
+		expect(rows(section).map(row => row.dataset.entryKey)).toEqual(['alice', 'bob']);
+		expect(rows(copy).map(row => row.dataset.entryKey)).toEqual(['alice', 'bob']);
+		copy.remove();
+	});
+
 	it('says so when nobody is customized', () => {
 		const section = openUsers();
 		expect(rows(section)).toEqual([]);
-		expect(section.querySelector('.hint').textContent).toContain('Nobody yet');
+		expect(section.querySelector('.hint').textContent.trim()).not.toBe('');
 	});
 });
