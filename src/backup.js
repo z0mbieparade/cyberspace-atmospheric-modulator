@@ -18,8 +18,9 @@ const BACKUP_SECTION_KEY = 'atmospheric-modulator-backup';
 /**
  * Every setting in the script, as the settings file holds them. Debug mode is
  * left out: it is for one session's troubleshooting, not a preference.
- * @returns {{app: string, version: number, exportedAt: string, featureConfig: Object, features: Object}}
- *   features: each feature's exportBackup(), by its key
+ * @returns {{app: string, version: number, exportedAt: string, featureConfig: Object, features: Object, siteCustomTheme: Object|null}}
+ *   features: each feature's exportBackup(), by its key; siteCustomTheme:
+ *   the site's own custom theme, which no other browser has
  */
 function exportBackup() {
 	const features = {};
@@ -38,6 +39,7 @@ function exportBackup() {
 		exportedAt: new Date().toISOString(),
 		featureConfig: { ...featureConfig },
 		features,
+		siteCustomTheme: readSiteCustomTheme(),
 	};
 }
 
@@ -46,17 +48,20 @@ function exportBackup() {
  * rest, so a failed import may still have changed settings.
  * Side effects: each feature stores its own part; updates featureConfig and
  * saves it, boots any feature the file turns on, and re-renders this
- * script's section of the settings tab.
+ * script's section of the settings tab. Writes the site's custom theme when
+ * the file has one (saveSiteCustomTheme).
  * @param {*} data - parsed from a settings file, as exportBackup() wrote it
- * @returns {{success: boolean, changed: boolean, message: string}} changed:
- *   whether anything was written; message: for the user
+ * @returns {{success: boolean, changed: boolean, siteThemeChanged: boolean, message: string}}
+ *   changed: whether anything was written; siteThemeChanged: whether the
+ *   site's custom theme was, which the site shows only after a reload;
+ *   message: for the user
  */
 function importBackup(data) {
 	if (!data || typeof data !== 'object' || data.app !== BACKUP_APP) {
-		return { success: false, changed: false, message: 'This is not an Atmospheric Modulator settings file. For settings from the separate Nick Colors userscript, turn nick colors on, then use Import from Nick Colors in its section.' };
+		return { success: false, changed: false, siteThemeChanged: false, message: 'This is not an Atmospheric Modulator settings file. For settings from the separate Nick Colors userscript, turn nick colors on, then use Import from Nick Colors in its section.' };
 	}
 	if (data.version > BACKUP_VERSION) {
-		return { success: false, changed: false, message: 'This settings file is from a newer Atmospheric Modulator. Update the script, then load it again.' };
+		return { success: false, changed: false, siteThemeChanged: false, message: 'This settings file is from a newer Atmospheric Modulator. Update the script, then load it again.' };
 	}
 
 	// Features first, so one the file turns on boots with its imported settings
@@ -75,6 +80,16 @@ function importBackup(data) {
 			// The alert gives only the message: the stack says where
 			console.error(LOG_PREFIX + ` Could not import ${feature.key}:`, e);
 			failures.push(`${feature.key}: ${e.message}`);
+		}
+	}
+
+	// A file from a browser without a custom theme leaves this one's alone
+	let siteThemeChanged = false;
+	if (data.siteCustomTheme != null) {
+		try {
+			siteThemeChanged = saveSiteCustomTheme(data.siteCustomTheme);
+		} catch (e) {
+			failures.push(`Site theme: ${e.message}`);
 		}
 	}
 
@@ -97,9 +112,9 @@ function importBackup(data) {
 	refreshSettingsSection(SETTINGS_SECTION_KEY);
 
 	if (failures.length) {
-		return { success: false, changed: true, message: ['Some settings were not imported.', ...failures, ...notices].join(' ') };
+		return { success: false, changed: true, siteThemeChanged, message: ['Some settings were not imported.', ...failures, ...notices].join(' ') };
 	}
-	return { success: true, changed: true, message: ['Settings imported.', ...notices].join(' ') };
+	return { success: true, changed: true, siteThemeChanged, message: ['Settings imported.', ...notices].join(' ') };
 }
 
 /**
@@ -247,16 +262,85 @@ function showReportIssueDialog() {
 
 /**
  * Import settings, and tell the user how it went.
- * Side effects: as importBackup; alerts; calls onImported when anything was
- * written, even by a partial import: a form showing the older values would
- * write them back on its next save.
+ * Side effects: as importBackup; alerts, or offers a reload when the site's
+ * custom theme changed (offerSiteThemeReload); calls onImported when anything
+ * was written, even by a partial import: a form showing the older values
+ * would write them back on its next save.
  * @param {*} data - parsed settings file
  * @param {Function} onImported - shows the imported settings
  */
 function finishImport(data, onImported) {
 	const result = importBackup(data);
-	alert(result.message);
+	if (result.siteThemeChanged) offerSiteThemeReload(result.message);
+	else alert(result.message);
 	if (result.changed) onImported();
+}
+
+/**
+ * Offer to reload the page, so the site shows the custom theme just stored.
+ * Side effects: opens a dialog; confirming reloads the page.
+ * @param {string} message - how the import went, for the user
+ */
+function offerSiteThemeReload(message) {
+	confirmAction({
+		title: 'Reload to show the site theme?',
+		message: `${escapeHtml(message)} Cyberspace shows the loaded site theme after the page reloads.`,
+		confirmLabel: 'RELOAD',
+		tone: 'caution',
+		onConfirm: () => location.reload(),
+	});
+}
+
+/**
+ * Copy the site's custom theme alone, as the site stores it.
+ * Side effects: writes the clipboard and alerts (copyText), or alerts that
+ * there is no custom theme.
+ */
+function copySiteTheme() {
+	const theme = readSiteCustomTheme();
+	if (!theme) {
+		alert('This browser has no Cyberspace custom theme. Make one in the site\'s Appearance settings first.');
+		return;
+	}
+	copyText(JSON.stringify(theme), 'Site theme copied to the clipboard.');
+}
+
+/**
+ * Read a pasted site theme, so the paste dialog stays open when it is not one.
+ * @param {string} text - the site's custom_theme, or Copy Site Theme's text
+ * @returns {Object} for saveSiteCustomTheme
+ * @throws {Error} for the user, when it is not JSON or not a custom theme
+ */
+function parseSiteThemeText(text) {
+	let theme;
+	try {
+		theme = JSON.parse(text);
+	} catch (err) {
+		throw new Error(`This is not a Cyberspace custom theme: ${err.message}`);
+	}
+	return sanitizeSiteCustomTheme(theme);
+}
+
+/**
+ * The showPasteDialog callback that stores a pasted site theme.
+ * Side effects: as saveSiteCustomTheme; offers a reload, or alerts.
+ * @param {Object|null} theme - from parseSiteThemeText
+ * @param {Error|null} err - why the paste was not a theme
+ */
+function importSiteTheme(theme, err) {
+	if (err) {
+		alert(err.message);
+		return;
+	}
+	let changed;
+	try {
+		changed = saveSiteCustomTheme(theme);
+	} catch (e) {
+		alert(e.message);
+		return;
+	}
+	if (changed) offerSiteThemeReload('Site theme loaded.');
+	else alert('This site theme is already the one in use.');
 }
 
 /**
@@ -283,7 +367,7 @@ function importFrom(onImported) {
 function confirmEraseAllSettings(onErased) {
 	confirmAction({
 		title: 'Erase all settings?',
-		message: 'This erases every setting, every per-name style and every note, and cannot be undone. To keep a copy, choose Save Settings File first.',
+		message: 'This erases every setting, every per-name style and every note, and cannot be undone. Your Cyberspace site theme is kept. To keep a copy, choose Save Settings File first.',
 		confirmLabel: 'ERASE EVERYTHING',
 		tone: 'danger',
 		onConfirm: () => {
@@ -343,7 +427,7 @@ function backupSchema({ onImported, onErased }) {
 	const today = () => new Date().toISOString().slice(0, 10);
 	return [
 		{ type: 'section', label: 'Backup', fields: [
-			{ type: 'hint', text: 'Every setting in this script, per-user nick colors included. Debug mode is not saved.' },
+			{ type: 'hint', text: 'Every setting in this script, per-user nick colors included, and your Cyberspace custom theme. Debug mode is not saved.' },
 			{ type: 'button', id: 'backup-copy', label: 'Copy all settings to the clipboard', buttonText: 'Copy to Clipboard',
 				onClick: () => copyText(JSON.stringify(exportBackup()), 'Settings copied to the clipboard.') },
 			{ type: 'button', id: 'backup-paste', label: 'Load settings from the clipboard', buttonText: 'Paste from Clipboard',
@@ -359,6 +443,13 @@ function backupSchema({ onImported, onErased }) {
 				onClick: () => showSaveBackupNoteDialog() },
 			{ type: 'button', id: 'backup-note-load', label: 'Load settings from Cyberspace note', buttonText: 'Load from Note',
 				onClick: () => loadBackupNote(onImported) },
+		]},
+		{ type: 'section', label: 'Site Theme', fields: [
+			{ type: 'hint', text: 'Only your custom colors and options from Cyberspace\'s Appearance settings. Every backup above has them too.' },
+			{ type: 'button', id: 'site-theme-copy', label: 'Copy the site theme to the clipboard', buttonText: 'Copy Site Theme',
+				onClick: () => copySiteTheme() },
+			{ type: 'button', id: 'site-theme-paste', label: 'Load a site theme from the clipboard', buttonText: 'Paste Site Theme',
+				onClick: () => showPasteDialog(importSiteTheme, { parse: parseSiteThemeText, title: 'Paste Site Theme', label: 'Paste a site theme from Copy Site Theme, or the site\'s custom_theme value.' }) },
 		]},
 		{ type: 'section', label: 'Troubleshooting', fields: [
 			{ key: 'debugMode', type: 'toggle', label: 'Debug mode: log details to the console, and show nick colors\' calculations', default: false },

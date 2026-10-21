@@ -66,17 +66,21 @@ const THEME_COLORS = {
 	},
 };
 
+// The site's own localStorage key for its Appearance settings' custom theme
+const SITE_CUSTOM_THEME_KEY = 'custom_theme';
+
 // The user's custom colors from the site's settings, or null
 let siteCustomTheme = null;
 
 /**
  * Read the user's custom colors from the site's localStorage.
- * Side effects: sets siteCustomTheme; logs and leaves it alone on bad JSON.
+ * Side effects: sets siteCustomTheme, to null when there is none or on bad
+ * JSON; logs bad JSON.
  */
 function loadSiteCustomTheme() {
+	siteCustomTheme = null;
 	try {
-		// First try custom_theme (full color customization)
-		const customThemeStr = localStorage.getItem('custom_theme');
+		const customThemeStr = localStorage.getItem(SITE_CUSTOM_THEME_KEY);
 		if (customThemeStr) {
 			siteCustomTheme = JSON.parse(customThemeStr);
 		}
@@ -85,6 +89,64 @@ function loadSiteCustomTheme() {
 	}
 }
 loadSiteCustomTheme();
+
+/**
+ * The user's custom theme as the site stores it now. The site's Appearance
+ * settings change it without a page load.
+ * Side effects: re-reads siteCustomTheme.
+ * @returns {Object|null} null when there is none
+ */
+function readSiteCustomTheme() {
+	loadSiteCustomTheme();
+	return siteCustomTheme;
+}
+
+// A custom_theme value the site's Appearance settings can make: a color, a
+// word such as 'off' or 'normal', a switch or a number. The site applies the
+// colors as CSS, so a shared file must not slip in url() or other CSS
+const SITE_THEME_KEY_PATTERN = /^[a-z][a-z0-9_]{0,31}$/i;
+const SITE_THEME_STRING_PATTERN = /^(#[0-9a-f]{3,8}|(rgba?|hsla?)\([\d\s.,%/]+\)|[a-z0-9-]{1,32})$/i;
+
+/**
+ * Check a custom theme before it goes into the site's storage.
+ * @param {*} theme - parsed, from a backup or a paste
+ * @returns {Object} a copy of it
+ * @throws {Error} for the user, when it is not a custom theme, or holds a
+ *   setting the site's Appearance settings cannot make
+ */
+function sanitizeSiteCustomTheme(theme) {
+	if (!theme || typeof theme !== 'object' || Array.isArray(theme)
+		|| typeof theme.fg !== 'string' || typeof theme.bg !== 'string') {
+		throw new Error('This is not a Cyberspace custom theme.');
+	}
+	const clean = {};
+	for (const [key, value] of Object.entries(theme)) {
+		const allowed = SITE_THEME_KEY_PATTERN.test(key) && (typeof value === 'boolean'
+			|| (typeof value === 'number' && Number.isFinite(value))
+			|| (typeof value === 'string' && SITE_THEME_STRING_PATTERN.test(value)));
+		if (!allowed) {
+			throw new Error(`This custom theme was not loaded. Its "${key}" setting is not one Cyberspace's Appearance settings can make.`);
+		}
+		clean[key] = value;
+	}
+	return clean;
+}
+
+/**
+ * Store a custom theme as the site's own. The site shows it on its next load.
+ * Side effects: writes the site's custom_theme in localStorage; re-reads
+ * siteCustomTheme.
+ * @param {*} theme - parsed, from a backup or a paste
+ * @returns {boolean} whether it differs from the one stored
+ * @throws {Error} as sanitizeSiteCustomTheme; or when localStorage refuses the write
+ */
+function saveSiteCustomTheme(theme) {
+	const text = JSON.stringify(sanitizeSiteCustomTheme(theme));
+	if (localStorage.getItem(SITE_CUSTOM_THEME_KEY) === text) return false;
+	localStorage.setItem(SITE_CUSTOM_THEME_KEY, text);
+	loadSiteCustomTheme();
+	return true;
+}
 
 /**
  * Look a theme up by name or by its site id: exact first, then

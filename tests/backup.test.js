@@ -120,6 +120,66 @@ describe('exportBackup and importBackup', () => {
 	});
 });
 
+describe('the site\'s custom theme', () => {
+	const THEME = { fg: '#91ff00', bg: '#060f04', fgDim: '#12892d', border: '#12892d', code: '#51ff46', codeBg: '#0c1c08',
+		disableTextGlow: false, enableNoise: false, softness: 'off', fontSize: 'normal' };
+	const file = (siteCustomTheme) => ({ app: 'cyberspace-atmospheric-modulator', version: 1, siteCustomTheme });
+	const siteTheme = () => JSON.parse(localStorage.getItem('custom_theme'));
+
+	afterEach(() => {
+		localStorage.removeItem('custom_theme');
+	});
+
+	it('goes out with the backup as the site stores it now, and comes back', () => {
+		expect(exportBackup().siteCustomTheme).toBeNull();
+		localStorage.setItem('custom_theme', JSON.stringify(THEME));
+		const exported = JSON.parse(JSON.stringify(exportBackup()));
+		expect(exported.siteCustomTheme).toEqual(THEME);
+
+		localStorage.removeItem('custom_theme');
+		expect(importBackup(exported)).toMatchObject({ success: true, siteThemeChanged: true });
+		expect(siteTheme()).toEqual(THEME);
+		// The same theme again needs no reload
+		expect(importBackup(exported).siteThemeChanged).toBe(false);
+	});
+
+	it('leaves this browser\'s theme alone when the file has none', () => {
+		localStorage.setItem('custom_theme', JSON.stringify(THEME));
+		expect(importBackup(file(null))).toMatchObject({ success: true, siteThemeChanged: false });
+		expect(importBackup({ app: 'cyberspace-atmospheric-modulator', version: 1 }).siteThemeChanged).toBe(false);
+		expect(siteTheme()).toEqual(THEME);
+	});
+
+	it('turns away a theme carrying CSS the site\'s form cannot make, and imports the rest', () => {
+		localStorage.setItem('custom_theme', JSON.stringify(THEME));
+		const result = importBackup({ ...file({ ...THEME, bg: 'url(https://example.com/x)' }), featureConfig: { holdDuration: 900 } });
+		expect(result).toMatchObject({ success: false, changed: true, siteThemeChanged: false });
+		expect(result.message).toContain('"bg"');
+		expect(siteTheme()).toEqual(THEME);
+		expect(featureConfig.holdDuration).toBe(900);
+	});
+
+	it('offers a reload after an import changes it, and only alerts when it did not', () => {
+		const alert = vi.spyOn(globalThis, 'alert').mockImplementation(() => {});
+		finishImport(file(THEME), () => {});
+		expect(alert).not.toHaveBeenCalled();
+		expect(doc.querySelector('.atmo-dialog').textContent).toContain('Reload');
+		doc.querySelector('.atmo-dialog-footer button.cancel').click();
+		expect(doc.querySelector('.atmo-dialog')).toBeNull();
+
+		finishImport(file(THEME), () => {});
+		expect(alert).toHaveBeenCalledWith('Settings imported.');
+		expect(doc.querySelector('.atmo-dialog')).toBeNull();
+	});
+
+	it('pastes alone: the site\'s own custom_theme text, but not a whole backup', () => {
+		expect(parseSiteThemeText(JSON.stringify(THEME))).toEqual(THEME);
+		expect(() => parseSiteThemeText(JSON.stringify(exportBackup()))).toThrow('not a Cyberspace custom theme');
+		expect(() => parseSiteThemeText(JSON.stringify({ ...THEME, softness: { nested: true } }))).toThrow('"softness"');
+		expect(() => parseSiteThemeText('{')).toThrow('not a Cyberspace custom theme');
+	});
+});
+
 describe('exportDebugLog', () => {
 	it('has every feature\'s part, even when one of them fails', () => {
 		FEATURES.push({ key: 'broken', booted: false, debugLog: () => { throw new Error('boom'); } });

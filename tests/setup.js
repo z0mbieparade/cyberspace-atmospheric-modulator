@@ -88,6 +88,8 @@ runAndExpose(code, [
 	'exportBackup',
 	'importBackup',
 	'parseBackupText',
+	'finishImport',
+	'parseSiteThemeText',
 	'exportDebugLog',
 	'reportSummary',
 	'renderBackupSection',
