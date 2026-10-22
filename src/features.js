@@ -12,6 +12,29 @@
 
 const FEATURES = [];
 let featuresStarted = false;
+// What one feature offers another, by name: a feature's names are private
+// to its block, so one calls another only through here
+const featureServices = {};
+
+/**
+ * Offer a function to the other features, under a name.
+ * Side effects: a later offer under the same name replaces this one.
+ * @param {string} name - as featureService asks for it
+ * @param {Function} service
+ */
+function provideFeatureService(name, service) {
+	featureServices[name] = service;
+}
+
+/**
+ * A function another feature offers (provideFeatureService).
+ * @param {string} name
+ * @returns {Function|null} null while nothing offers it: its feature has
+ *   not booted
+ */
+function featureService(name) {
+	return featureServices[name] ?? null;
+}
 
 /**
  * Add a feature for bootFeatures and the storage-ready hook to run.
@@ -19,7 +42,7 @@ let featuresStarted = false;
  *   exportBackup?: function(): Object, importBackup?: function(Object, boolean): {success: boolean, message: string},
  *   debugLog?: function(): string, reportSummary?: function(): string,
  *   resetSettings?: function(boolean): void, onSwitch?: function(boolean): void,
- *   renderSwitchDetail?: function(HTMLElement): void}} feature -
+ *   usesChooms?: boolean}} feature -
  *   key: its featureConfig switch; boot: start it, once the core has;
  *   onStorageReady: re-read its settings from storage: after async GM
  *   storage loads, and after an import stored new values (a backup, Import
@@ -35,8 +58,8 @@ let featuresStarted = false;
  *   data back to their defaults, told whether the feature has booted;
  *   onSwitch: its switch changed in the settings form while it was booted,
  *   told whether it is on now. Without it, a feature turned off stops on reload;
- *   renderSwitchDetail: draws a setting of its own just under its switch in
- *   the script's main settings (featureSwitchDetail), shown while it is on
+ *   usesChooms: it is for some users by how close they are (chooms.js),
+ *   so the choom stars and menu items show while it is on
  */
 function registerFeature(feature) {
 	FEATURES.push({ ...feature, booted: false });
@@ -108,28 +131,5 @@ function featuresStorageReady() {
 		}
 	}
 	bootFeatures();
-}
-
-/**
- * What a feature draws under its switch in the script's main settings: a
- * setting that belongs beside the switch but lives in the feature's scope.
- * Side effects: calls the feature's renderSwitchDetail into a new element.
- * @param {string} key - the feature's key
- * @returns {HTMLElement|null} null when the feature draws nothing there
- */
-function featureSwitchDetail(key) {
-	const feature = FEATURES.find(f => f.key === key);
-	if (!feature?.renderSwitchDetail) return null;
-	const detail = document.createElement('div');
-	// Set in under the switch, as a schema field's `sub` is
-	detail.className = uiClass('sub-setting');
-	try {
-		feature.renderSwitchDetail(detail);
-	} catch (e) {
-		// The rest of the settings still render
-		console.error(LOG_PREFIX + ` Failed to draw ${key}'s settings:`, e);
-		return null;
-	}
-	return detail;
 }
 

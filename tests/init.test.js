@@ -55,6 +55,7 @@ beforeEach(() => {
 	global.configureSettingsTab = vi.fn();
 	// The user menu is tested on its own
 	global.initUserMenu = vi.fn();
+	global.initChooms = vi.fn();
 	global.initSidebarLink = vi.fn();
 	// Features are tested on their own
 	startFeatures = vi.fn();

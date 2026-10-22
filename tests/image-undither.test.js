@@ -525,6 +525,7 @@ describe('feature config', () => {
 			nickColors: true,
 			nickNotes: true,
 			worldClock: false,
+			nickEffects: false,
 		});
 	});
 });

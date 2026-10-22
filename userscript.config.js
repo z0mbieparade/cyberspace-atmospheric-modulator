@@ -72,6 +72,7 @@ module.exports = {
 		'features.js',
 		'user-menu.js',
 		'user-list.js',
+		'chooms.js',
 		'sidebar-link.js',
 		'image-undither/image-undither.js',
 		{ scope: 'nick-colors', parts: [
@@ -97,6 +98,10 @@ module.exports = {
 		{ scope: 'world-clock', parts: [
 			'world-clock/world-clock.js',
 			'world-clock/init.js',
+		] },
+		{ scope: 'nick-effects', parts: [
+			'nick-effects/nick-effects.js',
+			'nick-effects/init.js',
 		] },
 		'settings-panel.js',
 		'backup.js',

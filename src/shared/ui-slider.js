@@ -26,6 +26,8 @@ function buildSliderGradient(stops) {
  * @param {Object} opts
  * @param {'single'|'range'} [opts.type='single']
  * @param {boolean} [opts.simple=false] - a thin track and round thumb
+ * @param {boolean} [opts.inline=false] - single with a label only: the
+ *   track and its value on the right of the label, in one row, as a select is
  * @param {number} [opts.min=0]
  * @param {number} [opts.max=100]
  * @param {number} [opts.step=1]
@@ -37,7 +39,7 @@ function buildSliderGradient(stops) {
  * @returns {Object} { el, getValue, getValues, setValue, setValues, setGradient, setSplitGradient, setThumbColor, setDisabled }
  */
 function createSlider(opts) {
-	const { type = 'single', simple = false, min = 0, max = 100, step = 1, onChange, label } = opts;
+	const { type = 'single', simple = false, inline = false, min = 0, max = 100, step = 1, onChange, label } = opts;
 	const isRange = type === 'range';
 	const labelId = uiId('slider');
 	const thumbCount = isRange ? 2 : 1;
@@ -46,6 +48,9 @@ function createSlider(opts) {
 	const glyphs = isRange ? ['▶', '◀'] : [''];
 
 	const container = document.createElement('div');
+	// A range's two value readouts sit under its two ends: it needs the width.
+	// Without a label, the inline grid would put the track in the label's column
+	if (inline && !isRange && label) container.className = uiClass('slider-inline');
 	// Accessible names are assembled from parts by id: the label (live, since
 	// some scripts update text inside it), the thumb's name for a range, and
 	// for the value buttons their own visible number, which a name must

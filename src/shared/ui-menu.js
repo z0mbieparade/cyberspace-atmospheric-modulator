@@ -27,9 +27,11 @@ function closeMenu({ returnFocus = false } = {}) {
  * The item under the pointer takes focus, so it and the keyboard agree.
  * Side effects: closes any open menu; adds the menu to <body> and focuses
  * it, or its first item; sets the --atmo-* theme colors.
- * @param {{label: string, items: Array<{label: string, onSelect: Function}>, x: number, y: number, opener?: HTMLElement, focusFirst?: boolean}} menu -
+ * @param {{label: string, items: Array<{label: string, onSelect: Function, checked?: boolean, group?: string}>, x: number, y: number, opener?: HTMLElement, focusFirst?: boolean}} menu -
  *   label: the menu's accessible name; items: in order, onSelect runs after
- *   the menu closes; x, y: viewport coordinates of its top left corner;
+ *   the menu closes; an item with checked is a checkbox item, showing a
+ *   check mark while on; a rule divides items whose group differs from the
+ *   one before; x, y: viewport coordinates of its top left corner;
  *   opener: gets focus back on Escape; focusFirst: focus the first item, for
  *   a menu opened from the keyboard. Otherwise the menu itself takes focus,
  *   and no item is shown as current until the pointer or an arrow picks one
@@ -45,14 +47,23 @@ function showMenu({ label, items, x, y, opener = null, focusFirst = true }) {
 	el.setAttribute('aria-label', label);
 	// Focusable from script: it holds focus until an item is picked
 	el.tabIndex = -1;
-	const buttons = items.map((item) => {
+	const buttons = items.map((item, i) => {
+		if (i > 0 && item.group !== items[i - 1].group) {
+			const rule = document.createElement('div');
+			rule.className = uiClass('menu-separator');
+			rule.setAttribute('role', 'separator');
+			el.append(rule);
+		}
 		const button = document.createElement('button');
 		button.type = 'button';
 		button.className = uiClass('menu-item');
-		button.setAttribute('role', 'menuitem');
+		button.setAttribute('role', item.checked === undefined ? 'menuitem' : 'menuitemcheckbox');
 		// Roving focus: arrows move between items, Tab leaves the menu
 		button.tabIndex = -1;
 		button.textContent = item.label;
+		// Its check mark is drawn from aria-checked (_ui.scss), so the label
+		// stays the item's whole text
+		if (item.checked !== undefined) button.setAttribute('aria-checked', String(item.checked));
 		button.addEventListener('mouseenter', () => button.focus());
 		button.addEventListener('click', () => {
 			// Focus back on the opener first: a dialog the item opens returns

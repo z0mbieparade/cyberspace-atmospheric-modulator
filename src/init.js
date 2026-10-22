@@ -29,6 +29,8 @@ if (isHostMatch(HOST_EXCLUDE) || isPathMatch(PATH_EXCLUDE)) {
 		initImageUndither();
 		skipUsernamesMatching(standaloneNickColorsSelector());
 		initUserMenu();
+		// The choom stars and menu items, for the features that use chooms
+		initChooms();
 		initSidebarLink();
 		configureSettingsTab({ label: SETTINGS_TAB_LABEL, title: SETTINGS_TAB_TITLE, hash: SETTINGS_TAB_HASH, warning: REPORT_WARNING, attribution: attributionItems() });
 		registerSettingsSection({ key: SETTINGS_SECTION_KEY, title: SETTINGS_TITLE, description: SETTINGS_SECTION_DESCRIPTION, icon: logoIconHtml('atmo-section-icon'), startsOpen: true, render: renderSettingsSection });

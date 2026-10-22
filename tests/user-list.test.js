@@ -6,7 +6,7 @@
  * page draws it, so a non-choom in choom mode is uncolored.
  */
 
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { dom } from './setup.js';
@@ -51,6 +51,8 @@ beforeAll(async () => {
 	// The core registers the section at boot; init.js is left out of the setup
 	registerUserListSection();
 	startFeatures();
+	initUserMenu();
+	initChooms();
 	await new Promise(resolve => setTimeout(resolve, 30));
 	delete global.gmRequestHandler;
 });
@@ -106,18 +108,67 @@ describe('the Users section', () => {
 		expect(add.textContent).toBe('add note');
 	});
 
-	it('marks chooms with a bright star and others with a dim one, and flips it on click', () => {
-		restore({ colors: { bob: { c: '#00ff00' } }, friends: { enabled: false, users: ['alice'] } });
+	it('marks chooms and best chooms with a star each, bright when on, and flips each on click', () => {
+		restore({ colors: { bob: { c: '#00ff00' } }, friends: { enabled: false, users: ['alice', 'carol'], besties: ['carol'] } });
 		const section = openUsers();
 		const star = (name) => section.querySelector(`button[aria-label="Choom @${name}"]`);
-		expect(star('alice').getAttribute('aria-pressed')).toBe('true');
-		expect(star('alice').textContent).toBe('★');
-		expect(star('bob').getAttribute('aria-pressed')).toBe('false');
-		expect(star('bob').textContent).toBe('☆');
+		const best = (name) => section.querySelector(`button[aria-label="Best choom @${name}"]`);
+		const pressed = (button) => [button.getAttribute('aria-pressed'), button.textContent];
+		expect([pressed(star('alice')), pressed(best('alice'))]).toEqual([['true', '★'], ['false', '☆']]);
+		expect([pressed(star('carol')), pressed(best('carol'))]).toEqual([['true', '★'], ['true', '★']]);
+		expect([pressed(star('bob')), pressed(best('bob'))]).toEqual([['false', '☆'], ['false', '☆']]);
 
+		// The second star adds both
+		best('bob').click();
+		expect([pressed(star('bob')), pressed(best('bob'))]).toEqual([['true', '★'], ['true', '★']]);
+		// Off, it leaves one
+		best('bob').click();
+		expect([pressed(star('bob')), pressed(best('bob'))]).toEqual([['true', '★'], ['false', '☆']]);
+		// The first star, off, removes both
+		best('bob').click();
 		star('bob').click();
-		expect(star('bob').getAttribute('aria-pressed')).toBe('true');
-		expect(exportBackup().features.nickColors.nf.users).toContain('bob');
+		expect(exportBackup().features.nickColors.nf.users).not.toContain('bob');
+		expect(exportBackup().features.nickColors.nf.besties).not.toContain('bob');
+		star('bob').click();
+		expect([pressed(star('bob')), pressed(best('bob'))]).toEqual([['true', '★'], ['false', '☆']]);
+	});
+
+	it('opens a user\'s menu when their name in a row is right-clicked, and leaves the name unstyled as a name', () => {
+		restore({ colors: { bob: { c: '#00ff00' } }, friends: { enabled: false, users: ['bob'] }, notes: { bob: 'met at the meetup' } });
+		const section = openUsers();
+		const name = section.querySelector('[data-entry-key="bob"] .atmo-color-name');
+		name.dispatchEvent(new dom.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+		const label = doc.querySelector('[role="menu"]').getAttribute('aria-label');
+		const items = Array.from(doc.querySelectorAll('[role^="menuitem"]'), item => item.textContent);
+		doc.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		expect(label).toBe('@bob');
+		expect(items).toEqual(expect.arrayContaining(['Edit Color', '★ Choom', '★★ Best choom', 'Edit Notes']));
+		// Not a name on the page: nick colors leaves the button itself alone
+		expect(name.hasAttribute('data-atmo-user')).toBe(false);
+		expect(name.dataset.nickColored).toBeUndefined();
+	});
+
+	it('opens no menu for page content claiming to stand for a user', () => {
+		const fake = doc.createElement('span');
+		fake.setAttribute('data-atmo-menu-user', 'eve');
+		fake.textContent = 'eve';
+		doc.body.appendChild(fake);
+		fake.dispatchEvent(new dom.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }));
+		expect(doc.querySelector('[role="menu"][aria-label="@eve"]')).toBeNull();
+		fake.remove();
+	});
+
+	it('shows no note tooltip on a row\'s name, whose row shows the note already', () => {
+		restore({ colors: { bob: { c: '#00ff00' } }, notes: { bob: 'met at the meetup' } });
+		const section = openUsers();
+		vi.useFakeTimers();
+		try {
+			section.querySelector('[data-entry-key="bob"] .atmo-color-name').dispatchEvent(new dom.window.MouseEvent('mouseover', { bubbles: true }));
+			vi.advanceTimersByTime(1000);
+			expect(doc.querySelector('.nn-tooltip.visible')).toBeNull();
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it('lists a friend under the case their note is saved in, and shows the note', () => {
@@ -158,15 +209,15 @@ describe('the Users section', () => {
 		expect(doc.activeElement.getAttribute('aria-label')).toBe('Edit notes on @bob');
 		expect(section.querySelector('.atmo-note-text').textContent).toBe('new');
 
-		const star = section.querySelector('button[aria-label="Choom @bob"]');
-		star.focus();
-		star.click();
-		expect(doc.activeElement.getAttribute('aria-label')).toBe('Choom @bob');
+		const best = section.querySelector('button[aria-label="Best choom @bob"]');
+		best.focus();
+		best.click();
+		expect(doc.activeElement.getAttribute('aria-label')).toBe('Best choom @bob');
 		expect(doc.activeElement.getAttribute('aria-pressed')).toBe('true');
 	});
 
 	it('saves a note added on a friend-only row under the name the page uses', () => {
-		// Added with Add Color from the menu, on the page's spelling
+		// Made a choom from the menu, on the page's spelling
 		restore({ friends: { enabled: true, users: ['Zed'] } });
 		const section = openUsers();
 		section.querySelector('button[aria-label="add note on @Zed"]').click();
@@ -191,19 +242,17 @@ describe('the Users section', () => {
 		expect(preview().style.color).not.toBe('');
 	});
 
-	it('redraws its names when choom mode is switched on', () => {
+	it('redraws its names when only chooms get colored', () => {
 		restore({ colors: { bob: { c: '#00ff00' } }, friends: { enabled: false, users: [] } });
 		const section = openUsers();
 		const preview = () => section.querySelector('li[data-entry-key="bob"] .atmo-color-preview');
 		expect(preview().style.color).not.toBe('');
 		const title = () => section.querySelector('li[data-entry-key="bob"] .atmo-color-name').title;
 		const colorTitle = title();
-		// The switch under nick colors' own, in the script's main settings
-		const main = doc.createElement('div');
-		section.after(main);
-		renderSettingsSection(main);
-		main.querySelector('[data-field-key="onlyColorFriends"] input').click();
-		main.remove();
+		// Whose nicks get colored, at the top of the Nick Colors section
+		const select = doc.querySelector('[data-atmo-settings-section="atmospheric-modulator-nick-colors"] [data-field-key="colorFor"] select');
+		select.value = 'all';
+		select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
 		expect(preview().style.color).toBe('');
 		// Its tooltip says why the name is plain now
 		expect(title()).not.toBe(colorTitle);

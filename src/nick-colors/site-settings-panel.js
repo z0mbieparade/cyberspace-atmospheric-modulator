@@ -102,6 +102,7 @@ function renderSiteSettingsSection(body) {
 		<div class="hint">Changes save as you make them. Per-user colors: right-click a username and ${COLOR_MENU_HOWTO}.<br />
 		<br />
 		Select a Preset theme below to create a starting point to adjust colors from, or toggle on "Follow site theme" to have the preset follow you when you change your site's theme.</div>
+		<div data-nick-color-for></div>
 		${presets}
 		<div class="hint nc-settings-preview-label" data-settings-preview-label>Nick color examples on your theme's background and inverted, from your settings below.</div>
 		<div class="atmo-dialog-preview nc-settings-preview">${preview}</div>
@@ -119,6 +120,8 @@ function renderSiteSettingsSection(body) {
 			})}
 		</div>
 	`;
+	// Whose nicks: chooms, not the color settings, so apart from the form
+	renderNickColorForSettings(body.querySelector('[data-nick-color-for]'));
 	const form = buildSiteSettingsForm(body, {
 		onImported: () => renderSiteSettingsSection(body),
 	});

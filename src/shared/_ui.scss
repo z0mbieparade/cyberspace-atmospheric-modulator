@@ -280,8 +280,10 @@ h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 		padding-top: 0;
 	}
 
+	// The size a stacked field's label has: one size for every label, beside
+	// its control or above it
 	.#{$p}-input-row label {
-		font-size: calc(var(--font-size-base) * 0.875);
+		font-size: var(--font-size-base);
 		color: var(--#{$p}-fg);
 	}
 
@@ -471,6 +473,33 @@ h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 		&:focus-visible {
 			@include focus-ring;
 		}
+	}
+
+	// The site's stylesheet takes the browser's arrow off every select. Ours
+	// draws one, in the text color: two halves of a square, a chevron, room
+	// for it on the right as the site's own selects leave (pr-7)
+	select {
+		appearance: none;
+		padding-right: calc(var(--spacing-sm) * 3.5);
+		background-image:
+			linear-gradient(45deg, transparent 50%, var(--#{$p}-fg) 50%),
+			linear-gradient(135deg, var(--#{$p}-fg) 50%, transparent 50%);
+		background-position:
+			calc(100% - var(--spacing-sm) - 5px) 50%,
+			calc(100% - var(--spacing-sm)) 50%;
+		background-size: 5px 5px;
+		background-repeat: no-repeat;
+		cursor: pointer;
+	}
+
+	// Beside its label, on the right (createInputRow): as wide as its
+	// longest option, not the row, as a short choice stretched across the
+	// panel reads as a text field; and it gives way to the label on a narrow
+	// panel. A stacked select keeps the stacked row's full width
+	.#{$p}-input-row select {
+		width: auto;
+		max-width: 60%;
+		min-width: 0;
 	}
 
 	textarea {
@@ -942,6 +971,31 @@ h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 	}
 }
 
+// Beside its label, on the right, as a select is (createSlider's inline).
+// Each row is its own grid, so the track has one width, up to 12rem, for
+// the tracks of every row to line up. The label takes the rest, and the
+// value ends the row with no gap after it. The value's floor of three digits
+// keeps the track still while the digits change. The number field that
+// edits it is wider, and moves the track left while open: a floor that held
+// it would put a gap between every track and its value
+.#{$p}-slider-inline {
+	display: grid;
+	grid-template-columns: 1fr minmax(6rem, 12rem) auto;
+	align-items: center;
+	column-gap: var(--spacing-sm);
+	margin-bottom: var(--spacing-sm);
+
+	.#{$p}-slider,
+	.#{$p}-slider-labels {
+		margin: 0;
+	}
+
+	.#{$p}-slider-labels button {
+		min-width: 3ch;
+		text-align: end;
+	}
+}
+
 // =====================================================
 // MENU
 // =====================================================
@@ -986,6 +1040,26 @@ h3:has(> .#{$p}-settings-fold[aria-expanded="false"]) {
 		@include focus-ring;
 		outline-offset: -2px;
 	}
+}
+
+// A checkbox item's mark, in a column of its own so the checkbox items'
+// labels line up. A mark, not a color, says it is on. Its alt text is
+// empty, as aria-checked already says so; a browser that cannot read alt
+// text keeps the plain mark before it
+.#{$p}-menu-item[role="menuitemcheckbox"]::before {
+	content: "";
+	display: inline-block;
+	width: 1.25em;
+}
+
+.#{$p}-menu-item[aria-checked="true"]::before {
+	content: "✓";
+	content: "✓" / "";
+}
+
+.#{$p}-menu-separator {
+	margin: var(--spacing-xs, 0.25rem) 0;
+	border-top: 1px solid var(--#{$p}-border);
 }
 
 // =====================================================

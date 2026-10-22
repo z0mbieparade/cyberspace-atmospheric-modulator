@@ -66,13 +66,15 @@ const SETTINGS_SCHEMA = [
 			if (!standaloneNickColorsRunning()) return null;
 			return warningBox('The separate Nick Colors userscript is running too. Turn one of them off.');
 		} },
-		// Only my chooms, from nick colors' scope. After the switch's own hint
-		// and warning, so each description stays under its own switch
-		{ key: 'nickColorsDetail', type: 'custom', showWhen: { field: 'nickColors', is: true }, render: () => featureSwitchDetail('nickColors') },
+	]},
+	// Under nick colors: by default it plays for ★★ best chooms
+	{ type: 'section', label: 'Nick effects', fields: [
+		{ key: 'nickEffects', type: 'toggle', label: 'Play an animation on user join/notification', default: DEFAULT_FEATURE_CONFIG.nickEffects },
+		{ type: 'hint', text: 'Create a custom animation effect when one of your best chooms joins cIRC, sends you a C-Mail, pokes you, etc.' },
 	]},
 	{ type: 'section', label: 'Nick notes', fields: [
 		{ key: 'nickNotes', type: 'toggle', label: 'Keep personal (private) notes on users, shown on hover', default: DEFAULT_FEATURE_CONFIG.nickNotes },
-		{ type: 'hint', text: 'Right-click or long-press a name and choose Notes. The CHOOMS section below shows all of your user notes.' },
+		{ type: 'hint', text: 'Right-click or long-press a name and choose Edit Notes. The CHOOMS section below shows all of your user notes.' },
 	]},
 	{ type: 'section', label: 'World clock', fields: [
 		{ key: 'worldClock', type: 'toggle', label: 'Show city times under cIRC\'s header', default: DEFAULT_FEATURE_CONFIG.worldClock },

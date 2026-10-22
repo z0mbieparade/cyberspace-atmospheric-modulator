@@ -29,7 +29,7 @@ registerFeature({
 
 	boot() {
 		// Switched off: gone from the menu now, not after a reload
-		registerUserMenuItem({ label: 'Notes', order: 20, showFor: () => featureConfig.nickNotes, onSelect: createNotesDialog });
+		registerUserMenuItem({ label: 'Edit Notes', order: 12, group: USER_MENU_GROUPS.edit, showFor: () => featureConfig.nickNotes, onSelect: createNotesDialog });
 		// Each note in the Users section on the settings tab
 		registerUserListSource({
 			order: 20,
@@ -43,20 +43,20 @@ registerFeature({
 		// Delegated, so names added later need nothing of their own. Shown on
 		// hover and on keyboard focus; Escape dismisses it (WCAG 1.4.13)
 		document.addEventListener('mouseover', (e) => {
-			const target = findUserMenuTarget(e);
+			const target = findNotedName(e);
 			if (target && !target.contains(e.relatedTarget)) showNotesTooltip(target);
 		});
 		document.addEventListener('mouseout', (e) => {
-			const target = findUserMenuTarget(e);
+			const target = findNotedName(e);
 			// Onto the tooltip keeps it, so its text can be read and selected
 			if (target && !target.contains(e.relatedTarget) && !notesTooltip?.contains(e.relatedTarget)) hideNotesTooltip();
 		});
 		document.addEventListener('focusin', (e) => {
-			const target = findUserMenuTarget(e);
+			const target = findNotedName(e);
 			if (target) showNotesTooltip(target);
 		});
 		document.addEventListener('focusout', (e) => {
-			if (findUserMenuTarget(e)) hideNotesTooltip();
+			if (findNotedName(e)) hideNotesTooltip();
 		});
 		// A click may navigate and take the name with it, without a mouseout
 		document.addEventListener('pointerdown', (e) => {

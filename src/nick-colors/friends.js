@@ -1,125 +1,122 @@
 // =====================================================
-// FRIENDS: ONLY COLOR THE NAMES YOU PICK
+// WHOSE NICKS GET COLORED
 // =====================================================
-// Users see "chooms", the site's cyberpunk slang for friends. The code says
-// friends. The saved keys say friends too, and must stay so: 'nickFriends'
-// in GM storage and in settings files is published in users' saves, and a
-// rename would empty every saved list and every older backup's.
-// With only chooms colored (the switch under nick colors' own), a name is colored only while its user is
-// on the list: no hashed color, custom color or site-wide override for
-// anyone else. A custom color stays saved when its user leaves the list, and
-// comes back when they rejoin. Kept apart from siteConfig, so Reset to
-// Preset leaves it alone.
+// Every name, every ★ choom's, or only ★★ best chooms' (CHOOM_AUDIENCES):
+// the choice at the top of the Nick Colors section. The chooms themselves
+// are the core's (chooms.js). A name outside the choice is not colored: no
+// hashed color, custom color or site-wide override. A custom color stays
+// saved, and comes back once its user is in it. Kept apart from
+// siteConfig, so Reset to Preset leaves it alone.
 
-// How to reach a name's Color dialog, either way the switch is: for the
-// settings hint, the help dialog and the console
-const COLOR_MENU_HOWTO = 'choose Color, or while only ★ chooms are colored, "Add Color" and then "Edit Color"';
+// How to reach a name's Color dialog: for the settings hint, the help dialog
+// and the console. Edit Color shows only for the names that get colored,
+// and is not named for the rest: a step to color one would be a choice the
+// user may not want
+const COLOR_MENU_HOWTO = 'choose "Edit Color"';
 
-// { enabled: boolean, users: usernames in the site's case, as colors and
-// notes are saved under them; compared without case }
-let nickFriends = { enabled: false, users: [] };
+// A CHOOM_AUDIENCES value
+let nickColorFor = 'everyone';
 
 /**
- * Read the friends list from storage.
- * Side effects: replaces nickFriends.
+ * Whose nicks get colored, from storage or a settings file.
+ * @param {*} data - { colorFor }; or, saved before the choice, { enabled },
+ *   true for only chooms colored, as the choom list's saved key held it
+ * @returns {string} a CHOOM_AUDIENCES value
  */
-function loadNickFriends() {
+function sanitizeNickColorFor(data) {
+	if (isAudience(data?.colorFor)) return data.colorFor;
+	return data?.enabled === true ? 'all' : 'everyone';
+}
+
+/**
+ * Read whose nicks get colored from storage. Saved before the choice, it
+ * was the choom list's switch (enabled): read from there, and saved apart.
+ * Saved only when that switch was read: before async storage (Greasemonkey
+ * 4) has loaded, or when it failed to, every read is the default, and
+ * saving one would put Everyone over the choice it has not read. Nothing
+ * read, the default stands, unsaved; onStorageReady reads again once loaded.
+ * Side effects: sets nickColorFor; may save it, and save the choom list
+ * again without the old switch.
+ */
+function loadNickColorFor() {
+	const saved = _GM_getValue('nickColorFor', null);
+	if (isAudience(saved)) {
+		nickColorFor = saved;
+		return;
+	}
+	let legacy = null;
 	try {
-		nickFriends = sanitizeNickFriends(JSON.parse(_GM_getValue('nickFriends', '{}')));
-	} catch (e) {
-		nickFriends = sanitizeNickFriends(null);
+		legacy = JSON.parse(_GM_getValue('nickFriends', 'null'));
+	} catch (e) { /* unreadable: the default */ }
+	nickColorFor = sanitizeNickColorFor(legacy);
+	if (typeof legacy?.enabled === 'boolean' && isGMStorageReady()) {
+		_GM_setValue('nickColorFor', nickColorFor);
+		// And the old switch goes from the list's key, so it is read once: a
+		// later load that read the list but not this key would otherwise
+		// migrate it again, over a choice made since
+		replaceChooms(choomList());
 	}
 }
-loadNickFriends();
+loadNickColorFor();
 
 /**
- * Write the friends list to storage.
- */
-function saveNickFriends() {
-	_GM_setValue('nickFriends', JSON.stringify(nickFriends));
-}
-
-/**
- * Replace the friends list and the toggle, and save.
- * Side effects: replaces nickFriends and saves it.
- * @param {*} friends - { enabled, users }, checked here; null for the defaults
- */
-function replaceNickFriends(friends) {
-	nickFriends = sanitizeNickFriends(friends);
-	saveNickFriends();
-}
-
-/**
- * Whether username is on the friends list.
- * @param {string} username
- * @returns {boolean}
- */
-function isNickFriend(username) {
-	const name = String(username).toLowerCase();
-	return nickFriends.users.some(user => user.toLowerCase() === name);
-}
-
-/**
- * Take the page's spelling for a friend saved lowercase by an earlier build,
- * so a color or note added from the Users section is saved under the name
- * the page looks up.
- * Side effects: may save the friends list.
- * @param {string} username - as the page shows it
- */
-function adoptFriendSpelling(username) {
-	if (username === username.toLowerCase()) return;
-	const at = nickFriends.users.indexOf(username.toLowerCase());
-	if (at === -1) return;
-	const users = nickFriends.users.slice();
-	users[at] = username;
-	replaceNickFriends({ ...nickFriends, users });
-}
-
-/**
- * Whether to color username's names: everyone's while the toggle is off.
+ * Whether to color username's names: whether they are among whose get colored.
  * @param {string} username
  * @returns {boolean}
  */
 function shouldColorNick(username) {
-	return !nickFriends.enabled || isNickFriend(username);
+	return isInAudience(nickColorFor, choomLevel(username));
 }
 
 /**
- * Put username on the list, or take them off, and show it on the page.
- * Side effects: saves the list; restyles every name; redraws the Users section.
- * @param {string} username
- * @param {boolean} friend - true to add, false to remove
+ * Whether only some names are colored: chooms, or best chooms.
+ * @returns {boolean}
  */
-function setNickFriend(username, friend) {
-	const name = String(username).toLowerCase();
-	const users = nickFriends.users.filter(user => user.toLowerCase() !== name);
-	if (friend) users.push(String(username));
-	replaceNickFriends({ ...nickFriends, users });
-	colorizeAll();
-	refreshUserList(username);
+function colorsOnlyChooms() {
+	return nickColorFor !== 'everyone';
 }
 
 /**
- * Turn only-chooms coloring on or off. Turned on with nobody on the list,
- * the signed-in user becomes the first friend, so their own name stays colored.
- * Side effects: saves it; restyles every name; may add the signed-in user
- * (addOwnNameAsFirstFriend).
- * @param {boolean} enabled
+ * Store whose nicks get colored.
+ * Side effects: sets nickColorFor; writes storage.
+ * @param {string} colorFor - a CHOOM_AUDIENCES value; anything else is everyone
  */
-function setOnlyColorFriends(enabled) {
-	replaceNickFriends({ ...nickFriends, enabled });
-	colorizeAll();
-	if (enabled && !nickFriends.users.length) addOwnNameAsFirstFriend();
+function replaceNickColorFor(colorFor) {
+	nickColorFor = isAudience(colorFor) ? colorFor : 'everyone';
+	_GM_setValue('nickColorFor', nickColorFor);
 }
 
 /**
- * Add the signed-in user to an empty friends list. Signed out, or with the
- * API out of reach, the list stays empty: they can add themselves.
- * Side effects: asks the Cyberspace API who is signed in; as setNickFriend.
+ * Set whose names are colored. Narrowed so that nobody would be colored, the
+ * signed-in user is added, so their own name stays colored.
+ * Side effects: saves it; restyles every name and the Users section's
+ * previews; may add the signed-in user (addOwnNameAsFirstChoom).
+ * @param {string} colorFor - a CHOOM_AUDIENCES value
+ */
+function setNickColorFor(colorFor) {
+	replaceNickColorFor(colorFor);
+	colorizeAll();
+	if (!anyoneColored()) addOwnNameAsFirstChoom();
+}
+
+/**
+ * Whether any name would be colored: with only chooms colored and none of
+ * them among whose get colored, none would.
+ * @returns {boolean}
+ */
+function anyoneColored() {
+	return !colorsOnlyChooms() || choomList().users.some(shouldColorNick);
+}
+
+/**
+ * Add the signed-in user, as close as the choice takes, while nobody is
+ * colored. Signed out, or with the API out of reach, nothing changes:
+ * they can add themselves.
+ * Side effects: asks the Cyberspace API who is signed in; as setChoomLevel.
  * @param {function(): Promise<string>} [lookup] - finds the signed-in username
  * @returns {Promise<void>}
  */
-async function addOwnNameAsFirstFriend(lookup = fetchOwnUsername) {
+async function addOwnNameAsFirstChoom(lookup = fetchOwnUsername) {
 	let username;
 	try {
 		username = await lookup();
@@ -131,30 +128,28 @@ async function addOwnNameAsFirstFriend(lookup = fetchOwnUsername) {
 		logDebug(NICK_LOG_PREFIX + ' Could not add you as your first choom: Cyberspace gave the name', JSON.stringify(username));
 		return;
 	}
-	// The switch went off, or someone was added, while the lookup ran
-	if (!nickFriends.enabled || nickFriends.users.length) return;
-	setNickFriend(username, true);
+	// Everyone is colored again, or someone colored was added, while the lookup ran
+	if (anyoneColored()) return;
+	// As close as the choice takes: their name is then one it colors
+	setChoomLevel(username, nickColorFor === 'best' ? CHOOM_LEVEL_BEST : CHOOM_LEVEL_CHOOM);
 }
 
 /**
- * The Only my chooms switch, under nick colors' own switch in the script's
- * main settings (renderSwitchDetail). The Users section's star adds and
- * removes friends.
- * Side effects: renders into container; the switch turns the mode on or
- * off at once, as every setting there saves as it is made.
+ * The Whose nicks get colored choice, at the top of the Nick Colors section.
+ * The Users section's stars add and remove chooms.
+ * Side effects: renders into container; a choice saves and recolors at
+ * once, as every setting there does (setNickColorFor).
  * @param {HTMLElement} container
  */
-function renderNickFriendsSettings(container) {
-	const engine = createSettingsEngine({
+function renderNickColorForSettings(container) {
+	createSettingsEngine({
 		container,
-		values: { onlyColorFriends: nickFriends.enabled },
+		values: { colorFor: nickColorFor },
 		schema: [
-			{ key: 'onlyColorFriends', type: 'toggle', label: 'Only my ★ chooms get their own color', default: false },
-			{ type: 'hint', text: 'Everyone else keeps the site\'s default colors. While on, right-click or long-press a username and choose "Add Color" to add a choom; the CHOOMS section lists them below.' },
+			{ key: 'colorFor', type: 'select', label: 'Whose nicks get colored', options: CHOOM_AUDIENCES },
 		],
 		onChange: (key, value) => {
-			if (key === 'onlyColorFriends') setOnlyColorFriends(value);
+			if (key === 'colorFor') setNickColorFor(value);
 		},
-	});
-	engine.render();
+	}).render();
 }

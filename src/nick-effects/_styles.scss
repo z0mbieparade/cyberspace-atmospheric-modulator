@@ -1,0 +1,100 @@
+@use 'ui';
+
+// The effect over cIRC's messages, or the whole window where there are none
+// (nick-effects.js places it). Above the script's dialogs, so Preview in
+// one shows; it takes no clicks, so nothing under it stops working
+.atmo-effect {
+	position: fixed;
+	z-index: 1000000;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+// Each glyph is placed by its animation (nick-effects.js)
+.atmo-effect-glyph {
+	position: absolute;
+	top: 0;
+	left: 0;
+	line-height: 1;
+	will-change: transform, opacity;
+}
+
+// With reduced motion, in place of the effect: the name outlined, still.
+// An outline, not a color, so it shows whatever the name's own color
+.atmo-effect-highlight {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+// The preset buttons. Unframed, like the rest of the tab
+.atmo-effect-presets {
+	margin: var(--spacing-sm) 0 0;
+	padding: 0;
+	border: 0;
+
+	legend {
+		padding: 0;
+		margin-bottom: var(--spacing-xs);
+	}
+}
+
+// Room between the preset buttons and the Effect heading under them
+.atmo-effect-form > .atmo-settings-section-wrapper:first-child > .atmo-settings-section > h4 {
+	margin-top: calc(var(--spacing-sm) * 2);
+}
+
+// The custom colors: a picker, its hex code and a remove button per row
+// (an entry list)
+.atmo-effect-colors {
+	margin: 0;
+	padding: 0;
+	border: 0;
+
+	legend {
+		padding: 0;
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.atmo-entry-list > li {
+		align-items: center;
+	}
+
+	input[type="color"] {
+		width: 2rem;
+		height: 1.5rem;
+		padding: 0;
+		border: 1px solid var(--atmo-border);
+		background: none;
+		cursor: pointer;
+
+		&:focus-visible {
+			@include ui.focus-ring;
+		}
+	}
+
+	// Seven characters, # and six digits, inside its padding and border
+	input[type="text"] {
+		width: calc(7ch + var(--spacing-sm) * 2 + 2px);
+		font-family: monospace;
+	}
+}
+
+// Room under a run of sub-settings, as a motion's own, before the next
+// setting. On that setting, so it holds whichever of the run are hidden
+.atmo-effect-form .atmo-sub-setting + .atmo-settings-field:not(.atmo-sub-setting) {
+	margin-top: var(--spacing-sm);
+}
+
+// Preview and Save preset, under the settings
+.atmo-effect-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--spacing-sm);
+	margin-top: var(--spacing-sm);
+}
+
+// A saved preset and its delete button, kept on one line as the chips wrap
+.atmo-effect-saved-preset {
+	display: inline-flex;
+	align-items: center;
+}

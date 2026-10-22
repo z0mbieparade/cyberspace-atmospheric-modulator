@@ -22,11 +22,13 @@ function fetchOverrides() {
 
 registerFeature({
 	key: 'nickColors',
+	// Whose nicks get colored may be chooms only
+	usesChooms: true,
 
 	onStorageReady(booted) {
 		loadSiteConfig();
 		loadCustomNickColors();
-		loadNickFriends();
+		loadNickColorFor();
 		if (booted) colorizeAll();
 	},
 
@@ -54,8 +56,6 @@ registerFeature({
 	reportSummary: nickReportSummary,
 	// Off takes the colors off every name now; on puts them back
 	onSwitch: () => colorizeAll(),
-	// Only my chooms, under the switch in the main settings
-	renderSwitchDetail: renderNickFriendsSettings,
 
 	boot() {
 		// This script starts at document-start, before the site's stylesheet:
@@ -68,21 +68,25 @@ registerFeature({
 		followSiteThemePreset();
 
 		// Switched off: gone from the menu now, not after a reload. With only
-		// friends colored, a friend can be edited or removed, anyone else added
-		const friendsOnly = () => featureConfig.nickColors && nickFriends.enabled;
-		registerUserMenuItem({ label: 'Color', order: 10, showFor: () => featureConfig.nickColors && !nickFriends.enabled, onSelect: editNickColor });
-		registerUserMenuItem({ label: 'Add Color', order: 10, showFor: username => friendsOnly() && !isNickFriend(username), onSelect: username => setNickFriend(username, true) });
-		registerUserMenuItem({ label: 'Edit Color', order: 10, showFor: username => friendsOnly() && isNickFriend(username), onSelect: editNickColor });
-		registerUserMenuItem({ label: 'Remove Color', order: 11, showFor: username => friendsOnly() && isNickFriend(username), onSelect: username => setNickFriend(username, false) });
+		// some chooms colored, only a colored name's color can be edited; the
+		// choom items are the core's (chooms.js)
+		registerUserMenuItem({ label: 'Edit Color', order: 10, group: USER_MENU_GROUPS.edit, showFor: username => featureConfig.nickColors && shouldColorNick(username), onSelect: editNickColor });
+		// A choom added or removed may be colored now, or not
+		onChoomsChanged(() => colorizeAll());
+		// A color in the hue, saturation and lightness ranges, for nick
+		// effects' Nick colors theme: before the contrast fix a name on the
+		// page gets, so it may sit close to the background. None while off
+		provideFeatureService('nickColorSample', () => featureConfig.nickColors
+			? getMappedNickColor(`sample-${Math.random()}`, 'hsl-string') : null);
 
-		// The Users section on the settings tab: each name as the page draws it, and
-		// the star that makes them a choom
+		// The Users section on the settings tab: each name with a color, drawn
+		// as the page draws it. Chooms' rows and stars are the core's
 		registerUserListSource({
 			order: 10,
 			isShown: () => featureConfig.nickColors,
-			usernames: () => [...Object.keys(customNickColors), ...nickFriends.users],
+			usernames: () => Object.keys(customNickColors),
 			name: nickColorListName,
-			parts: nickColorListParts,
+			parts: () => [],
 			actions: nickColorListActions,
 		});
 

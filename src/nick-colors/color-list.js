@@ -2,8 +2,8 @@
 // USERS SECTION: nick colors' part
 // =====================================================
 // In the Users section (src/user-list.js): each user's name drawn as the page
-// draws it, which opens the Color dialog, and the star before it that marks them a choom
-// (a friend, in the code) or not, and adds or removes them. Below the list,
+// draws it, which opens the Color dialog. The stars before it are the
+// core's (chooms.js). Below the list,
 // the Reset Custom User Styles button.
 
 /**
@@ -41,28 +41,6 @@ function nickColorListName(username) {
 }
 
 /**
- * The star before a name: bright ★ for a choom, dim ☆ for anyone else, and a
- * toggle button that adds or removes them.
- * @param {string} username
- * @returns {Node[]}
- */
-function nickColorListParts(username) {
-	const isChoom = isNickFriend(username);
-	const star = document.createElement('button');
-	star.type = 'button';
-	star.className = uiClass('choom-toggle');
-	// Its name stays put; aria-pressed says which way it is
-	star.setAttribute('aria-label', `Choom @${username}`);
-	star.setAttribute('aria-pressed', String(isChoom));
-	star.title = isChoom ? 'Remove from chooms' : 'Add to chooms';
-	star.textContent = isChoom ? '★' : '☆';
-	// One control whichever way it is: focus stays on it when it flips
-	star.dataset.entryControl = 'friend';
-	star.addEventListener('click', () => setNickFriend(username, !isChoom));
-	return [userListColumn(star, 'mark')];
-}
-
-/**
  * Below the list, under its own heading: the button that resets every
  * custom nick color.
  * Side effects: the button asks, then clears them (confirmClearCustomNickColors).
@@ -88,7 +66,7 @@ function nickColorListActions() {
 
 /**
  * Draw the list's names again, in place: the settings, the theme or the
- * Only my chooms switch changed how names look. Rows and focus stay.
+ * Whose nicks get colored choice changed how names look. Rows and focus stay.
  * Side effects: restyles each preview name.
  */
 function restyleNickColorList() {

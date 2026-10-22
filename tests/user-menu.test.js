@@ -11,7 +11,7 @@ const doc = dom.window.document;
 const stored = (key) => JSON.parse(localStorage.getItem('atmosphericModulator_' + key) || 'null');
 const feature = (key) => FEATURES.find(f => f.key === key);
 const menu = () => doc.querySelector('[role="menu"]');
-const menuItems = () => Array.from(doc.querySelectorAll('[role="menuitem"]'));
+const menuItems = () => Array.from(doc.querySelectorAll('[role^="menuitem"]'));
 const key = (k) => doc.activeElement.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 
 /**
@@ -49,6 +49,7 @@ beforeAll(() => {
 	localStorage.removeItem('atmosphericModulator_nickNotes');
 	startFeatures();
 	initUserMenu();
+	initChooms();
 });
 
 afterEach(() => {
@@ -64,18 +65,19 @@ describe('the user menu', () => {
 		const event = rightClick(addName('alice'));
 		expect(event.defaultPrevented).toBe(true);
 		expect(menu().getAttribute('aria-label')).toBe('@alice');
-		expect(menuItems().map(item => item.textContent)).toEqual(['Color', 'Notes', 'Poke', 'Profile']);
+		expect(menuItems().map(item => item.textContent)).toEqual(['Edit Color', 'Edit Notes', '★ Choom', '★★ Best choom', 'Poke', 'Profile']);
 		// No item looks picked until the pointer or an arrow picks one
 		expect(doc.activeElement).toBe(menu());
 	});
 
 	it('makes the item under the pointer the current one', () => {
 		rightClick(addName('alice'));
-		const notes = menuItems().find(item => item.textContent === 'Notes');
+		const notes = menuItems().find(item => item.textContent === 'Edit Notes');
 		notes.dispatchEvent(new dom.window.MouseEvent('mouseenter'));
 		expect(doc.activeElement).toBe(notes);
+		// Over the rule, which takes no focus
 		key('ArrowDown');
-		expect(doc.activeElement.textContent).toBe('Poke');
+		expect(doc.activeElement.textContent).toBe('★ Choom');
 	});
 
 	it('leaves out Profile and Poke on that user\'s profile, but not on their posts', () => {
@@ -83,11 +85,11 @@ describe('the user menu', () => {
 		try {
 			// A mention typed in another case than the URL
 			rightClick(addName('aLICE'));
-			expect(menuItems().map(item => item.textContent)).toEqual(['Color', 'Notes']);
+			expect(menuItems().map(item => item.textContent)).toEqual(['Edit Color', 'Edit Notes', '★ Choom', '★★ Best choom']);
 			closeMenu();
 			dom.reconfigure({ url: 'https://cyberspace.online/alice/some-post' });
 			rightClick(addName('alice'));
-			expect(menuItems().map(item => item.textContent)).toEqual(['Color', 'Notes', 'Poke', 'Profile']);
+			expect(menuItems().map(item => item.textContent)).toEqual(['Edit Color', 'Edit Notes', '★ Choom', '★★ Best choom', 'Poke', 'Profile']);
 		} finally {
 			dom.reconfigure({ url: 'https://cyberspace.online/' });
 		}
@@ -98,12 +100,13 @@ describe('the user menu', () => {
 		try {
 			featureConfig.nickColors = false;
 			rightClick(name);
-			expect(menuItems().map(item => item.textContent)).toEqual(['Notes', 'Poke', 'Profile']);
+			// Nor the stars, with no feature on that uses chooms
+			expect(menuItems().map(item => item.textContent)).toEqual(['Edit Notes', 'Poke', 'Profile']);
 			closeMenu();
 			featureConfig.nickColors = true;
 			featureConfig.nickNotes = false;
 			rightClick(name);
-			expect(menuItems().map(item => item.textContent)).toEqual(['Color', 'Poke', 'Profile']);
+			expect(menuItems().map(item => item.textContent)).toEqual(['Edit Color', '★ Choom', '★★ Best choom', 'Poke', 'Profile']);
 		} finally {
 			featureConfig.nickColors = true;
 			featureConfig.nickNotes = true;
@@ -124,7 +127,7 @@ describe('the user menu', () => {
 		key('ArrowUp');
 		expect(doc.activeElement.textContent).toBe('Profile');
 		key('ArrowDown');
-		expect(doc.activeElement.textContent).toBe('Color');
+		expect(doc.activeElement.textContent).toBe('Edit Color');
 		key('End');
 		expect(doc.activeElement.textContent).toBe('Profile');
 		key('Escape');
@@ -135,7 +138,7 @@ describe('the user menu', () => {
 	it('returns focus to the name before an item\'s dialog opens, so closing it lands there', () => {
 		const name = addName('alice');
 		rightClick(name);
-		menuItems().find(item => item.textContent === 'Notes').click();
+		menuItems().find(item => item.textContent === 'Edit Notes').click();
 		doc.querySelector('.atmo-dialog-footer button.cancel').click();
 		expect(doc.activeElement).toBe(name);
 	});
@@ -195,10 +198,139 @@ describe('the user menu', () => {
 	});
 });
 
-describe('nick notes', () => {
-	it('saves notes from the menu\'s Notes item', () => {
+describe('choom and best choom', () => {
+	/**
+	 * Save the core's choom list.
+	 * @param {Object} friends - { users, besties }
+	 */
+	function saveFriends(friends) {
+		replaceChooms(friends);
+	}
+	/**
+	 * The choom items for a name, each as its label and whether it is checked.
+	 * @param {string} username
+	 * @returns {Array<[string, string|null]>}
+	 */
+	const itemsFor = (username) => {
+		rightClick(addName(username));
+		return menuItems().filter(item => item.textContent.includes('hoom'))
+			.map(item => [item.textContent, item.getAttribute('role') === 'menuitemcheckbox' ? item.getAttribute('aria-checked') : null]);
+	};
+	const choose = (label) => menuItems().find(item => item.textContent === label).click();
+
+	afterEach(() => saveFriends({}));
+
+	it('shows both stars as checkbox items, checked for the level each user has', () => {
+		saveFriends({ users: ['pat', 'sam'], besties: ['sam'] });
+		expect(itemsFor('stranger')).toEqual([['★ Choom', 'false'], ['★★ Best choom', 'false']]);
+		closeMenu();
+		expect(itemsFor('pat')).toEqual([['★ Choom', 'true'], ['★★ Best choom', 'false']]);
+		closeMenu();
+		expect(itemsFor('sam')).toEqual([['★ Choom', 'true'], ['★★ Best choom', 'true']]);
+		// Unchecking Choom takes both stars
+		choose('★ Choom');
+		expect(exportBackup().features.nickColors.nf).toEqual({ colorFor: 'everyone', users: ['pat'], besties: [] });
+	});
+
+	it('takes a best choom down to one star, and makes a stranger a best choom at once', () => {
+		saveFriends({ users: ['sam'], besties: ['sam'] });
+		itemsFor('sam');
+		choose('★★ Best choom');
+		expect(exportBackup().features.nickColors.nf).toEqual({ colorFor: 'everyone', users: ['sam'], besties: [] });
+		itemsFor('stranger');
+		choose('★★ Best choom');
+		expect(choomLevel('stranger')).toBe(2);
+	});
+
+	it('divides the edit items, the stars, and where to go with rules', () => {
 		rightClick(addName('alice'));
-		menuItems().find(item => item.textContent === 'Notes').click();
+		const parts = Array.from(menu().children, child => child.getAttribute('role') === 'separator' ? '—' : child.textContent);
+		expect(parts).toEqual(['Edit Color', 'Edit Notes', '—', '★ Choom', '★★ Best choom', '—', 'Poke', 'Profile']);
+	});
+});
+
+describe('Edit Color, by whose nicks get colored', () => {
+	/**
+	 * Store chooms and whose nicks get colored, as a settings file does.
+	 * @param {string} colorFor - a CHOOM_AUDIENCES value
+	 * @param {{users?: string[], besties?: string[]}} friends
+	 */
+	function coloring(colorFor, friends) {
+		FEATURES.find(f => f.key === 'nickColors').importBackup({ v: 2, nf: { colorFor, ...friends } }, true);
+	}
+	const colorItemsFor = (username) => {
+		rightClick(addName(username));
+		const items = menuItems().map(item => item.textContent).filter(label => label.endsWith('Color'));
+		closeMenu();
+		return items;
+	};
+
+	afterEach(() => coloring('everyone', {}));
+
+	it('offers Edit Color for anyone while everyone is colored', () => {
+		coloring('everyone', { users: ['pat'] });
+		expect([colorItemsFor('pat'), colorItemsFor('stranger')]).toEqual([['Edit Color'], ['Edit Color']]);
+	});
+
+	it('offers Edit Color only to a colored choom while only chooms are colored', () => {
+		coloring('all', { users: ['pat', 'sam'], besties: ['sam'] });
+		expect([colorItemsFor('pat'), colorItemsFor('sam'), colorItemsFor('stranger')]).toEqual([['Edit Color'], ['Edit Color'], []]);
+		coloring('best', { users: ['pat', 'sam'], besties: ['sam'] });
+		expect([colorItemsFor('pat'), colorItemsFor('sam'), colorItemsFor('stranger')]).toEqual([[], ['Edit Color'], []]);
+	});
+
+	it('offers neither with nick colors off', () => {
+		coloring('all', { users: ['pat'] });
+		featureConfig.nickColors = false;
+		try {
+			expect([colorItemsFor('pat'), colorItemsFor('stranger')]).toEqual([[], []]);
+		} finally {
+			featureConfig.nickColors = true;
+		}
+	});
+});
+
+describe('chooms, whichever feature uses them', () => {
+	const choomItemsFor = (username) => {
+		rightClick(addName(username));
+		const items = menuItems().map(item => item.textContent).filter(label => label.includes('hoom'));
+		closeMenu();
+		return items;
+	};
+
+	it('offers the choom items while nick colors or nick effects is on, and neither once both are off', () => {
+		const was = { nickColors: featureConfig.nickColors, nickEffects: featureConfig.nickEffects };
+		try {
+			featureConfig.nickColors = false;
+			featureConfig.nickEffects = true;
+			expect(choomItemsFor('pat')).toEqual(['★ Choom', '★★ Best choom']);
+			featureConfig.nickEffects = false;
+			expect(choomItemsFor('pat')).toEqual([]);
+		} finally {
+			Object.assign(featureConfig, was);
+		}
+	});
+
+	it('keeps a choom added with nick colors off, for nick colors to color', () => {
+		const was = featureConfig.nickColors;
+		try {
+			featureConfig.nickColors = false;
+			featureConfig.nickEffects = true;
+			rightClick(addName('quinn'));
+			menuItems().find(item => item.textContent === '★★ Best choom').click();
+			expect(choomLevel('quinn')).toBe(2);
+		} finally {
+			featureConfig.nickColors = was;
+			featureConfig.nickEffects = false;
+			replaceChooms({});
+		}
+	});
+});
+
+describe('nick notes', () => {
+	it('saves notes from the menu\'s Edit Notes item', () => {
+		rightClick(addName('alice'));
+		menuItems().find(item => item.textContent === 'Edit Notes').click();
 		const textarea = doc.querySelector('.atmo-dialog textarea');
 		expect(doc.querySelector(`label[for="${textarea.id}"]`).textContent.trim()).not.toBe('');
 		textarea.value = '  met at the meetup  ';
@@ -233,7 +365,7 @@ describe('nick notes', () => {
 	it('edits a note saved under other capitals from the menu, instead of starting a second one', () => {
 		feature('nickNotes').importBackup({ Zed: 'met at the meetup' }, true);
 		rightClick(addName('zed'));
-		menuItems().find(item => item.textContent === 'Notes').click();
+		menuItems().find(item => item.textContent === 'Edit Notes').click();
 		const textarea = doc.querySelector('.atmo-dialog textarea');
 		expect(textarea.value).toBe('met at the meetup');
 		textarea.value = 'second meetup';
@@ -282,7 +414,7 @@ describe('nick notes', () => {
 
 	it('has a SETTINGS button, to the script\'s section on the settings tab', () => {
 		rightClick(addName('alice'));
-		menuItems().find(item => item.textContent === 'Notes').click();
+		menuItems().find(item => item.textContent === 'Edit Notes').click();
 		const settings = doc.querySelector('.atmo-dialog .atmo-header-settings');
 		// Off the settings page, it stores where to scroll, then loads the tab
 		settings.click();
@@ -294,7 +426,7 @@ describe('nick notes', () => {
 	it('forgets a note saved empty', () => {
 		feature('nickNotes').importBackup({ alice: 'old' }, true);
 		rightClick(addName('alice'));
-		menuItems().find(item => item.textContent === 'Notes').click();
+		menuItems().find(item => item.textContent === 'Edit Notes').click();
 		doc.querySelector('.atmo-dialog textarea').value = '  ';
 		doc.querySelector('.atmo-dialog-footer button.save').click();
 		expect(stored('nickNotes')).toEqual({});

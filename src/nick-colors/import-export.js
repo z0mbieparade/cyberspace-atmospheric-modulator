@@ -35,7 +35,10 @@ function exportSettings() {
 		data.customNickColors = customNickColors;
 	}
 
-	if (nickFriends.enabled || nickFriends.users.length) data.nickFriends = nickFriends;
+	// The core's choom list rides along, under the key it always had: every
+	// backup before chooms moved out of nick colors has it here
+	const chooms = choomList();
+	if (colorsOnlyChooms() || chooms.users.length) data.nickFriends = { colorFor: nickColorFor, ...chooms };
 
 	return data;
 }
@@ -137,15 +140,16 @@ function withImportedNotes(styles, raw) {
 
 /**
  * Import settings from a JSON object
- * Side effects: replaces siteConfig, the custom colors and the friends list
- * (nickFriends), and saves them; with recolor, recolors the page.
+ * Side effects: replaces siteConfig and the custom colors; from nickFriends,
+ * replaces the core's choom list and whose nicks get colored; saves them;
+ * with recolor, recolors the page.
  * @param {Object} data - The imported data
  * @param {{recolor?: boolean, replaceAll?: boolean, keepFriends?: boolean}} [options] -
  *   recolor: off when nick colors has not booted, so names stay uncolored
  *   while the feature is off; replaceAll: settings, per-user styles and
- *   friends the data leaves out go back to their defaults, as a restore
- *   should; keepFriends: leave the friends list as it is, for a file from
- *   the separate Nick Colors script, which has none
+ *   chooms the data leaves out go back to their defaults, as a restore
+ *   should; keepFriends: leave the chooms and whose nicks get colored as
+ *   they are, for a file from the separate Nick Colors script, which has none
  * @returns {{ success: boolean, message: string, dropped?: number }} dropped:
  *   per-user style properties left out as unsafe to import
  */
@@ -199,7 +203,10 @@ function importSettings(data, { recolor = true, replaceAll = false, keepFriends 
 			dropUserNotes();
 		}
 
-		if (data.nickFriends && !keepFriends) replaceNickFriends(data.nickFriends);
+		if (data.nickFriends && !keepFriends) {
+			replaceChooms(data.nickFriends);
+			replaceNickColorFor(sanitizeNickColorFor(data.nickFriends));
+		}
 
 		if (recolor) colorizeAll();
 		const migrationNote = isV1 ? ' (migrated from v1)' : '';

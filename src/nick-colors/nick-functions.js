@@ -8,10 +8,10 @@ const COLORED_BY_US_ATTR = `data-${UI_PREFIX}-colored`;
 
 /**
  * Style one marked username for its user, or take its styling off: while
- * nick colors is switched off, or for a non-friend while only friends are
- * colored.
+ * nick colors is switched off, or for a user outside Whose nicks get
+ * colored (shouldColorNick).
  * Side effects: as applyStyles: inline styles, data attributes, icons; or
- * as unstyleUsername; for a name the site writes, as adoptFriendSpelling.
+ * as unstyleUsername; for a name the site writes, as adoptChoomSpelling.
  * @param {HTMLElement} element - marked by the username finder
  */
 function styleUsername(element) {
@@ -19,8 +19,8 @@ function styleUsername(element) {
 	const isMention = element.hasAttribute(MENTION_ATTR);
 	// A mention is spelled as someone typed it; a name the site writes is the
 	// spelling colors and notes are saved under
-	if (!isMention) adoptFriendSpelling(username);
-	// Switched off, or a non-friend: left in the site's colors. Only names this
+	if (!isMention) adoptChoomSpelling(username);
+	// Switched off, or not among whose get colored: left in the site's colors. Only names this
 	// script colored lose it. While the separate Nick Colors script runs, none
 	// do: it colors the same names, with the same data attributes, skips any
 	// already colored, and would not color them again

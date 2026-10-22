@@ -171,7 +171,7 @@ describe('sending from a dialog', () => {
 		name.setAttribute('data-atmo-user', 'alice');
 		doc().body.appendChild(name);
 		name.dispatchEvent(new dom.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }));
-		Array.from(doc().querySelectorAll('[role="menuitem"]')).find(item => item.textContent === 'Color').click();
+		Array.from(doc().querySelectorAll('[role^="menuitem"]')).find(item => item.textContent === 'Edit Color').click();
 
 		const label = requestOverride().textContent;
 		requestOverride().click();
@@ -197,7 +197,7 @@ describe('Poke, in the user menu', () => {
 		name.setAttribute('data-atmo-user', username);
 		doc().body.appendChild(name);
 		name.dispatchEvent(new dom.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }));
-		const item = Array.from(doc().querySelectorAll('[role="menuitem"]')).find(i => i.textContent === 'Poke');
+		const item = Array.from(doc().querySelectorAll('[role^="menuitem"]')).find(i => i.textContent === 'Poke');
 		name.remove();
 		return item;
 	}

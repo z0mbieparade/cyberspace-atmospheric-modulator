@@ -38,6 +38,8 @@ const DEFAULT_FEATURE_CONFIG = {
 	nickNotes: true,      // personal notes on usernames, shown on hover
 	// City times under cIRC's header, on its page and in the sidebar. Off: it adds to the chat page
 	worldClock: false,
+	// An effect when a choom joins your cIRC room or sends a notification. Off: it plays over the page
+	nickEffects: false,
 };
 
 let featureConfig = { ...DEFAULT_FEATURE_CONFIG };
@@ -86,5 +88,6 @@ function saveFeatureConfig() {
 function onGMStorageReady() {
 	loadDebugMode();
 	loadFeatureConfig();
+	loadChooms();
 	featuresStorageReady();
 }

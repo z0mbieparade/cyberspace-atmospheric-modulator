@@ -61,7 +61,7 @@ function escapeHtml(value) {
  * @param {string} [opts.type='text'] - text, textarea, select, toggle, tristate or button
  * @param {string} [opts.value=''] - for text and textarea
  * @param {string} [opts.placeholder='']
- * @param {string} [opts.hint=''] - HTML shown below a stacked input
+ * @param {string} [opts.hint=''] - HTML shown below a stacked input or a select
  * @param {string} [opts.classes=''] - extra classes on the row
  * @param {string} [opts.options] - <option> HTML, for select
  * @param {boolean} [opts.checked=false] - for toggle
@@ -69,7 +69,8 @@ function escapeHtml(value) {
  * @param {boolean|null} [opts.state=null] - for tristate: null is auto
  * @param {string} [opts.defaultLabel=''] - for tristate: what auto resolves to
  * @param {string} [opts.buttonText=''] - for button
- * @param {boolean} [opts.stacked=false] - label above the input
+ * @param {boolean} [opts.stacked=false] - label above the input; a select
+ *   otherwise sits beside its label, on the right, as a toggle does
  * @param {string} [opts.ariaLabel] - plain-text name for a stacked input or a
  *   toggle with no visible label: a placeholder or a heading above is not a
  *   label (WCAG 1.3.1, 4.1.2)
@@ -83,6 +84,18 @@ function createInputRow(opts) {
 	} = opts;
 	const extra = classes ? ' ' + classes : '';
 	const nameAttr = !label && ariaLabel ? ` aria-label="${escapeHtml(ariaLabel)}"` : '';
+
+	// A choice sits beside its label, on the right, as a switch does: a few
+	// words do not need a line of their own
+	if (type === 'select' && options && !stacked) {
+		return `
+			<div class="${uiClass('input-row', 'flex', 'items-center', 'justify-between', 'gap-4')}${extra}">
+				${label ? `<label for="${id}">${label}</label>` : ''}
+				<select id="${id}"${nameAttr}>${options}</select>
+			</div>
+			${hint ? `<div class="hint">${hint}</div>` : ''}
+		`;
+	}
 
 	if (stacked || ['text', 'textarea', 'select'].includes(type)) {
 		let inputHtml;

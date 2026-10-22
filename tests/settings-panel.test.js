@@ -170,28 +170,13 @@ describe('renderSettingsSection (Settings > AtmoMod)', () => {
 		expect(stored('debugMode')).toBeNull();
 	});
 
-	it('puts Only my chooms under the nick colors switch, shown while that is on', () => {
+	it('leaves whose nicks get colored to the Nick Colors section, and sets in the hold duration', () => {
 		const body = mount();
-		const nickColors = body.querySelector('[data-field-key="nickColors"]');
-		const chooms = body.querySelector('[data-field-key="nickColorsDetail"]');
-		// After the switch's own description, which stays under it
-		expect(nickColors.nextElementSibling.querySelector('.hint')).not.toBeNull();
-		expect(nickColors.compareDocumentPosition(chooms) & dom.window.Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(chooms.parentElement.lastElementChild).toBe(chooms);
-		expect(chooms.querySelector('[data-field-key="onlyColorFriends"] input')).not.toBeNull();
-		// Both sub-settings are set in under their switch
-		expect(chooms.querySelector('.atmo-sub-setting')).not.toBeNull();
+		expect(body.querySelector('[data-field-key="colorFor"]')).toBeNull();
 		expect(body.querySelector('[data-field-key="holdDuration"]').classList.contains('atmo-sub-setting')).toBe(true);
 		expect(body.querySelector('[data-field-key="unditherImages"]').classList.contains('atmo-sub-setting')).toBe(false);
-		const on = sectionField(body, 'nickColors');
-		if (!on.checked) on.click();
-		expect(chooms.style.display).not.toBe('none');
-		on.click();
-		expect(chooms.style.display).toBe('none');
-		on.click();
-		// It is not saved as a feature switch
-		expect(JSON.parse(stored('featureConfig'))).not.toHaveProperty('nickColorsDetail');
 	});
+
 
 	it('starts nick colors as soon as it is turned on', () => {
 		featureConfig.nickColors = false;

@@ -3,7 +3,9 @@
 // =====================================================
 // Right-click or long-press a username for a menu of what to do with that
 // user. Features add the items. The usernames are the ones
-// src/shared/usernames.js marks, once a feature has started it.
+// src/shared/usernames.js marks, once a feature has started it, and the
+// elements that stand for a user without being a name on the page
+// (standForUser), such as a row's name in the Chooms section.
 
 // A press this long on a name is a hold
 const USER_MENU_HOLD_MS = 500;
@@ -13,12 +15,34 @@ const USER_MENU_CLICK_GUARD_MS = 600;
 
 const userMenuItems = [];
 
+// The menu's groups, each under a rule, in this order by their items' order:
+// what is saved about the user, how close they are, and where to go
+const USER_MENU_GROUPS = { edit: 'edit', chooms: 'chooms', go: 'go' };
+
+// Elements that are not a name on the page but stand for a user, such as a
+// row's name in the Chooms section, to the user: each opens that user's menu
+// too. Held here, not in an attribute, which page content could carry too.
+// Apart from USERNAME_ATTR, so nick colors does not restyle them as names
+const userMenuElements = new WeakMap();
+
+/**
+ * Let an element of the script's own open a user's menu, as their name on
+ * the page does.
+ * Side effects: remembers el for as long as it exists.
+ * @param {HTMLElement} el
+ * @param {string} username
+ */
+function standForUser(el, username) {
+	userMenuElements.set(el, username);
+}
+
 /**
  * Add an item to the user menu.
- * @param {{label: string, order?: number, onSelect: function(string, HTMLElement): void, showFor?: function(string): boolean}} item -
- *   order: lower comes first, default 0; onSelect: gets the username and the
- *   element the menu was opened on; showFor: whether to list it for this
- *   username, default always
+ * @param {{label: string, order?: number, group?: string, onSelect: function(string, HTMLElement): void, showFor?: function(string): boolean, checkedFor?: function(string): boolean}} item -
+ *   order: lower comes first, default 0; group: USER_MENU_GROUPS, a rule
+ *   between groups; onSelect: gets the username and the element the menu
+ *   was opened on; showFor: whether to list it for this username, default
+ *   always; checkedFor: makes it a checkbox item, on for this username or not
  */
 function registerUserMenuItem(item) {
 	userMenuItems.push(item);
@@ -26,31 +50,49 @@ function registerUserMenuItem(item) {
 }
 
 /**
- * The username element an event started on, if any.
+ * The username element an event started on, or the element standing for a
+ * user (standForUser), if any: the nearest, from the event's target out.
  * @param {Event} e
  * @returns {HTMLElement|null}
  */
 function findUserMenuTarget(e) {
 	if (!(e.target instanceof Element)) return null;
-	return e.target.closest(USERNAME_SELECTOR);
+	for (let el = e.target; el; el = el.parentElement) {
+		if (userMenuElements.has(el) || el.matches(USERNAME_SELECTOR)) return el;
+	}
+	return null;
+}
+
+/**
+ * The user an element from findUserMenuTarget stands for.
+ * @param {HTMLElement} target
+ * @returns {string}
+ */
+function userMenuUsername(target) {
+	return userMenuElements.get(target) ?? usernameOf(target);
 }
 
 /**
  * Open the user menu for a username element.
  * Side effects: opens the menu.
- * @param {HTMLElement} target - a marked username element
+ * @param {HTMLElement} target - from findUserMenuTarget
  * @param {{x: number, y: number}|null} point - where the pointer was, or null
  *   (keyboard, touch) to open under the element
  * @param {boolean} fromKeyboard - focus the first item, as a keyboard user expects
  */
 function openUserMenu(target, point, fromKeyboard) {
-	const username = usernameOf(target);
+	const username = userMenuUsername(target);
 	const rect = target.getBoundingClientRect();
 	showMenu({
 		label: `@${username}`,
 		items: userMenuItems
 			.filter(item => !item.showFor || item.showFor(username))
-			.map(item => ({ label: item.label, onSelect: () => item.onSelect(username, target) })),
+			.map(item => ({
+				label: item.label,
+				group: item.group,
+				checked: item.checkedFor?.(username),
+				onSelect: () => item.onSelect(username, target),
+			})),
 		x: point ? point.x : rect.left,
 		y: point ? point.y : rect.bottom,
 		opener: target,
@@ -70,6 +112,7 @@ function initUserMenu() {
 	registerUserMenuItem({
 		label: 'Poke',
 		order: 90,
+		group: USER_MENU_GROUPS.go,
 		// The profile has its own [P] Poke button
 		showFor: username => !isOnProfileOf(username),
 		onSelect: async (username) => {
@@ -94,10 +137,12 @@ function initUserMenu() {
 	registerUserMenuItem({
 		label: 'Profile',
 		order: 100,
+		group: USER_MENU_GROUPS.go,
 		showFor: username => !isOnProfileOf(username),
 		onSelect: (username, target) => {
 			// The name's own link goes through the site's router, without a reload
-			if (target.matches(`a[href="/${username}"]`)) target.click();
+			// Compared, not put in a selector: a name with a quote would break it
+			if (target.matches('a') && target.getAttribute('href') === '/' + username) target.click();
 			else window.location.assign('/' + encodeURIComponent(username));
 		},
 	});

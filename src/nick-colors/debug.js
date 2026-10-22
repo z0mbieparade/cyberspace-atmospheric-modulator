@@ -44,7 +44,7 @@ function getOrCreateDebugPre(parent, classes = '') {
 
 /**
  * Nick colors' part of the script's debug log: the theme, the settings in
- * effect, the custom colors, the friends list and its switch, the overrides,
+ * effect, the custom colors, the chooms and whose nicks get colored, the overrides,
  * and any debug readouts on the page.
  * @returns {string} plain text, for the debug log file
  */
@@ -63,7 +63,9 @@ function nickDebugLog() {
 	block('EFFECTIVE CONFIG (after site theme integration)', JSON.stringify(getEffectiveSiteConfig(), null, 2));
 	block('SAVED SITE CONFIG', JSON.stringify(siteConfig, null, 2));
 	block(`CUSTOM NICK COLORS (${Object.keys(customNickColors).length} total)`, JSON.stringify(customNickColors, null, 2));
-	block(`CHOOMS (${nickFriends.enabled ? 'only chooms colored' : 'everyone colored'})`, nickFriends.users.join(', ') || 'none');
+	const chooms = choomList();
+	block(`CHOOMS (colored: ${nickColorFor})`, chooms.users.join(', ') || 'none');
+	block(`BEST CHOOMS (${chooms.besties.length} total)`, chooms.besties.join(', ') || 'none');
 	block(`MANUAL OVERRIDES (${Object.keys(MANUAL_OVERRIDES).length} total)`, JSON.stringify(MANUAL_OVERRIDES, null, 2));
 
 	// Shown only in debug mode, but always on the page
@@ -82,7 +84,7 @@ function nickDebugLog() {
  */
 function nickReportSummary() {
 	const eff = getEffectiveSiteConfig();
-	const friends = nickFriends.enabled ? ` | chooms only (${nickFriends.users.length})` : '';
+	const friends = colorsOnlyChooms() ? ` | colored: ${nickColorFor} (${choomList().users.length} chooms)` : '';
 	return `${Object.keys(customNickColors).length} custom${friends} | H:${eff.minHue}-${eff.maxHue} S:${eff.minSaturation}-${eff.maxSaturation} L:${eff.minLightness}-${eff.maxLightness}`
 		+ ` | Settings: ${JSON.stringify(minifyKeys({ siteConfig }))}`;
 }

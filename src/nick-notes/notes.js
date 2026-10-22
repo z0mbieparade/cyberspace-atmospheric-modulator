@@ -140,6 +140,17 @@ function getNotesTooltip() {
 }
 
 /**
+ * The marked name an event started on, if any, for the tooltip. Not the
+ * Chooms section's row names, which the user menu also opens on: their row
+ * shows the note already.
+ * @param {Event} e
+ * @returns {HTMLElement|null}
+ */
+function findNotedName(e) {
+	return e.target instanceof Element ? e.target.closest(USERNAME_SELECTOR) : null;
+}
+
+/**
  * Show a name's notes under it, after a short wait.
  * Side effects: marks the name (help cursor), and describes it by the
  * tooltip while it shows.

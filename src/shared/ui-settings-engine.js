@@ -19,10 +19,12 @@
  * @param {Object} [opts.defaults] - values for reset(), over each def.default
  * @param {Function} [opts.onChange] - called with (key, value, api) on every change
  * @param {HTMLElement} opts.container - where render() puts the form
+ * @param {boolean} [opts.inlineSliders=false] - each slider field on the
+ *   right of its label (createSlider's inline); range fields stay full width
  * @returns {Object} the engine API
  */
 function createSettingsEngine(opts) {
-	const { schema, values = {}, defaults = {}, onChange, container } = opts;
+	const { schema, values = {}, defaults = {}, onChange, container, inlineSliders = false } = opts;
 
 	// Internal state: field key -> { value, element, slider?, definition }
 	const fields = {};
@@ -233,6 +235,7 @@ function createSettingsEngine(opts) {
 				const sliderOpts = {
 					type: 'single',
 					simple: def.simple !== false,
+					inline: inlineSliders,
 					min: def.min ?? 0,
 					max: def.max ?? 100,
 					step: def.step ?? 1,
@@ -469,7 +472,9 @@ function createSettingsEngine(opts) {
 		const result = {};
 		Object.keys(fields).forEach(key => {
 			const fieldState = fields[key];
-			// Buttons and custom fields hold no value; a key only lets showWhen find them
+			// Buttons hold no value. Custom fields are left out too: most have a
+			// key only for showWhen to find them. One that holds a value sets
+			// it with setFieldValue, and onChange reports it
 			if (fieldState && !['button', 'custom'].includes(fieldState.definition.type)) {
 				result[key] = fieldState.value;
 			}

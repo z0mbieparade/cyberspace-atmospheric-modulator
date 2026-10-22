@@ -44,8 +44,8 @@ describe('the username finder', () => {
 		const event = new dom.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 });
 		link.dispatchEvent(event);
 		expect(event.defaultPrevented).toBe(true);
-		const items = Array.from(doc.querySelectorAll('[role="menuitem"]'), item => item.textContent);
-		expect(items).toContain('Notes');
+		const items = Array.from(doc.querySelectorAll('[role^="menuitem"]'), item => item.textContent);
+		expect(items).toContain('Edit Notes');
 		expect(items.length).toBe(3);
 		closeMenu();
 	});

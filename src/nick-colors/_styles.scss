@@ -176,13 +176,19 @@ body[data-theme="poetry"]
 	@include ui.bare-button;
 }
 
-// The star before a name: bright for a choom, dim for anyone else. The glyph
-// changes too (★ / ☆), so it does not rest on color alone
+// A choom's two stars, side by side in one cell
+.atmo-choom-stars {
+	display: inline-flex;
+	gap: var(--spacing-xs);
+}
+
 .atmo-choom-toggle {
 	@include ui.bare-button;
 	// The dim text color, made readable on every theme (theme-colors.js)
 	--atmo-bare-color: var(--atmo-fg-muted);
 
+	// Each star, choom or best choom: bright when on, dim when off. The glyph
+	// changes too (★ / ☆), so it does not rest on color alone
 	&[aria-pressed="true"] {
 		--atmo-bare-color: var(--atmo-fg);
 	}

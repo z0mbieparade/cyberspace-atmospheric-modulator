@@ -7,6 +7,7 @@ A custom userscript to add additional usability features to [Cyberspace.online](
 - Give every username its own hashed color
 - Keep personal (private) notes on people so you can remember who they are
 - Add a little World Clock widget above cIRC
+- Rain confetti, snow or hearts when one of your ★★ best chooms joins cIRC
 
 ![Cyberspace Preview with AtmoMod installed](assets/cyberspace-preview.png)
 

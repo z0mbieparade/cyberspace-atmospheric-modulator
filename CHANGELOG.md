@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 Each version starts with a one-line summary, a `>` line under its heading. The update banner shows it to users of older versions as plain text, not markdown: keep it to one line of at most 160 characters, written for them, without `**` or links. A longer one is cut.
 
+## [0.2.7] - 2026-10-22
+
+> Added: ★★ best chooms, nick animation effects when a choom joins cIRC/sends a notification, custom theme added to backups. Changed: a clearer user menu.
+
+### Added
+- **Best chooms** - a second star for your besties. Right-click or long-press a name and check ★ Choom or ★★ Best choom. In the Chooms section, a second star beside each name adds or removes a best choom
+- **Nick effects** - when a ★★ best choom joins the cIRC room you have open, an effect plays over cIRC's messages for a few seconds. A notification from them, such as a C-Mail, plays it over the page, unless Also play when they send me a notification is off. It watches /chat's Online list, and cIRC's join lines on /chat or in the sidebar, with the site's show joins and leaves in cIRC setting on. Who animation effects play for can make it every ★ choom, or everyone, instead. Off by default. Pick a preset (Confetti, Snow, Stars, Hearts, Fireworks, Bubbles, Rain, Fountain, Starfield, Matrix Rain, or one you saved with Save preset), then change its characters (or the letters of their name), colors (matching your Cyberspace theme, nick colors theme, the choom's nick color, or your own, picked a row each; one per firework rocket), motion and its own settings (gravity, launch direction, rockets, rocket distance, wobble, splash, spread, spray distance), amount, size, length, easing, spin, drift, stagger and fade. Right-click or long-press someone it plays for and choose Edit Effect, then turn on Custom nick effect to give them their own. With reduced motion turned on in your system, their name is outlined instead
+- **Backups carry your Cyberspace site theme** - the clipboard, the settings file and the Cyberspace note hold the custom colors and options from the site's Appearance settings. Loading one stores them, then offers to reload so the site shows them. A backup from a browser without a custom theme leaves yours alone. A theme holding anything the Appearance settings cannot make, such as `url()`, is turned away, and the rest of the backup still loads
+- **Site Theme buttons** - Copy Site Theme and Paste Site Theme, in Backup & Troubleshooting, move the site theme alone. Paste takes Copy Site Theme's text or the site's own `custom_theme` value
+
+### Changed
+- **Chooms work with nick colors off** - the stars and the ★ Choom and ★★ Best choom menu items show while nick colors or nick effects is on, and nick effects plays for your chooms either way. Your list carries over
+- **Full-size settings labels** - every setting's label is full size. Dropdowns, and Nick Effects' sliders, sit beside their labels, on the right, as switches do
+- **Only my ★ chooms is Whose nicks get colored** - in the Nick Colors section, not the main settings: ★★ best chooms, every ★ choom, or everyone. Your setting carries over: only chooms is every ★ choom
+- **A clearer user menu** - its items are in groups with a rule between them: Edit Color, Edit Effect and Edit Notes; then ★ Choom and ★★ Best choom, each checked for the stars a user has; then Poke and Profile. Color is Edit Color, whoever is colored, and Notes is Edit Notes. Add Color and Remove Color are gone: check or uncheck the stars
+
+### Fixed
+- **No user menu in the Chooms section** - right-click or long-press a name there for the same menu as on the page: Edit Color, Edit Effect, Edit Notes, the stars and the rest. Or focus it and press the menu key
+- **Dropdowns had no arrow** - the script's selects, such as Animation effect and Who animation effects play for, show a down arrow, as the site's own do, each as wide as its longest choice
+
 ## [0.2.6] - 2026-10-10
 
 > Added: Follow site theme. Changed: preset theme buttons, sticky nick examples, one settings dialog. Fixed: sidebar and /me names, monochrome color.

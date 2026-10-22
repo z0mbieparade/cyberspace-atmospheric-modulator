@@ -2,10 +2,10 @@
 // USERS: every user you have customized, on the settings tab
 // =====================================================
 // Titled "Chooms" on the tab; the code calls it the Users section.
-// One row per user with a custom color, a note or a friend mark, sorted by
-// name. Features fill the rows (registerUserListSource): nick colors draws
-// the name as the page draws it and adds the choom star; nick notes adds the note.
-// Each shows only while its feature is on.
+// One row per user with a custom color, a note or a star, sorted by name.
+// Sources fill the rows (registerUserListSource): the core's choom list
+// adds the two stars (chooms.js); nick colors draws the name as the page
+// draws it; nick notes adds the note. Each shows only while its feature is on.
 
 const USER_LIST_SECTION_KEY = 'atmospheric-modulator-users';
 const USER_LIST_SECTION_TITLE = 'Chooms';
@@ -105,13 +105,17 @@ function renderUserList(body) {
 			name = document.createElement('strong');
 			name.textContent = username;
 		}
+		// Right-click or long-press opens their menu here too, as on the page;
+		// and the menu key or Shift+F10, so it takes focus as a link on the page does
+		standForUser(name, username);
+		if (!name.matches('a[href], button, [tabindex]')) name.tabIndex = 0;
 		return {
 			key: username,
 			// In column order, so the keyboard meets them as the eye does
 			parts: [userListColumn(name, 'name'), ...sources.flatMap(source => source.parts(username))]
 				.sort((a, b) => userListColumnIndex(a) - userListColumnIndex(b)),
 		};
-	}), 'Nobody yet. Right-click or long-press a username to give it a color or a note.');
+	}), 'Nobody yet. Right-click or long-press a username to make them a choom, or give them a color or a note.');
 	list.classList.add(uiClass('user-list'));
 	body.appendChild(list);
 	const actions = sources.flatMap(source => source.actions?.() ?? []);
