@@ -360,8 +360,10 @@ function repoLinkHtml(url) {
 	return `<a class="github-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="14px" aria-hidden="true"> <path fill="currentColor" d="M5 2h4v2H7v2H5V2Zm0 10H3V6h2v6Zm2 2H5v-2h2v2Zm2 2v-2H7v2H3v-2H1v2h2v2h4v4h2v-4h2v-2H9Zm0 0v2H7v-2h2Zm6-12v2H9V4h6Zm4 2h-2V4h-2V2h4v4Zm0 6V6h2v6h-2Zm-2 2v-2h2v2h-2Zm-2 2v-2h2v2h-2Zm0 2h-2v-2h2v2Zm0 0h2v4h-2v-4Z"/> </svg></a>`;
 }
 
-// Elements Tab can land on, for the focus trap
-const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+// What Tab reaches, for the focus trap: an element taken out of the tab order (tabindex -1),
+// as each pick of a roving-focus grid but one, is never first or last
+const FOCUSABLE_SELECTOR = ['a[href]', 'button:not([disabled])', 'input:not([disabled])', 'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]']
+	.map(selector => `${selector}:not([tabindex="-1"])`).join(', ');
 
 /**
  * Whether el can take focus: neither it nor an ancestor up to root is
@@ -391,11 +393,13 @@ function isRendered(el, root) {
  * Side effects: refreshes the --atmo-* theme variables, appends the overlay to
  * document.body and moves focus.
  * @param {Object} opts
- * @param {string} opts.title - HTML
+ * @param {string} opts.title - HTML; the dialog's name for screen readers
  * @param {string} opts.content - HTML
  * @param {Array<{label: string, class?: string, onClick?: Function}>} [opts.buttons] -
  *   footer buttons, in order; onClick gets close()
  * @param {string} [opts.width='400px'] - CSS min-width; max is 100px more
+ * @param {string} [opts.header] - HTML shown in the header in place of the
+ *   title, as a row of tabs; the title is then hidden text
  * @param {string} [opts.preview] - HTML for a strip above the content
  * @param {string} [opts.warning] - HTML for the warning box in the footer
  * @param {string[]} [opts.attribution] - HTML items for the attribution row,
@@ -410,7 +414,7 @@ function isRendered(el, root) {
 function createDialog(opts) {
 	const defaults = typeof dialogDefaults === 'function' ? dialogDefaults() : {};
 	const {
-		title, content, buttons = [], width = '400px', preview = '', footerHtml = '',
+		title, content, buttons = [], width = '400px', header = '', preview = '', footerHtml = '',
 		warning = '', attribution = [], onClose, onSettings, onHelp, onOpen,
 	} = { ...defaults, ...opts };
 
@@ -430,7 +434,8 @@ function createDialog(opts) {
 		<div class="${uiClass('dialog')}" role="dialog" aria-modal="true" aria-labelledby="${titleId}" tabindex="-1"
 			style="min-width: ${width}; max-width: calc(${width} + 100px);">
 			<div class="${uiClass('dialog-header', 'flex', 'justify-between')}">
-				<h3 id="${titleId}">${title}</h3>
+				<h3 id="${titleId}"${header ? ` class="${uiClass('sr-only')}"` : ''}>${title}</h3>
+				${header}
 				<div class="spacer"></div>
 				${onSettings ? `<button type="button" class="${uiClass('header-settings')} link-brackets"><span class="inner">SETTINGS</span></button>` : ''}
 				${onHelp ? `<button type="button" class="${uiClass('header-help')} link-brackets" aria-label="Help"><span class="inner" aria-hidden="true">?</span></button>` : ''}

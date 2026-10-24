@@ -40,6 +40,13 @@ const DEFAULT_FEATURE_CONFIG = {
 	worldClock: false,
 	// An effect when a choom joins your cIRC room or sends a notification. Off: it plays over the page
 	nickEffects: false,
+	// An emoji button by the chat's message box, in the ASCII art window and in
+	// the site's editor, on /write and in post replies. On: it only puts in
+	// what the user picks, and the editor's Emoticon button it hides comes
+	// back when it is turned off
+	emojiPicker: true,
+	// Its NSFW kaomoji and emoticons. Off: rude, and the chat is shared
+	emojiPickerNsfw: false,
 };
 
 let featureConfig = { ...DEFAULT_FEATURE_CONFIG };

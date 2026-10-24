@@ -9,6 +9,7 @@
 @use 'world-clock/styles' as world-clock;
 // The nick effects over the page, and its settings
 @use 'nick-effects/styles' as nick-effects;
+@use 'emoji-picker/styles' as emoji-picker;
 
 // The Changelog section's list of versions (changelog-section.js)
 .atmo-changelog {

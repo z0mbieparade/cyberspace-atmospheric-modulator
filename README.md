@@ -7,11 +7,17 @@ A custom userscript to add additional usability features to [Cyberspace.online](
 - Give every username its own hashed color
 - Keep personal (private) notes on people so you can remember who they are
 - Add a little World Clock widget above cIRC
-- Rain confetti, snow or hearts when one of your ★★ best chooms joins cIRC
+- Do an animation effect when a user joins cIRC or sends you a notification
+- Emoticon, kaomoji, ASCII art characters, symbols, and a handful of emoji for chat messages and journal entries.
 
 ![Cyberspace Preview with AtmoMod installed](assets/cyberspace-preview.png)
 
 ![Undither Images preview](assets/elmo-undither.gif)
+
+![Nick Effects custom snow animation](assets/nick-effect-custom2.gif)
+
+![Emoji Dialog](assets/emoji-dialog.png)
+
 ## Quick Start
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) or [Greasemonkey](https://www.greasespot.net/)

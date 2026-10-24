@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 Each version starts with a one-line summary, a `>` line under its heading. The update banner shows it to users of older versions as plain text, not markdown: keep it to one line of at most 160 characters, written for them, without `**` or links. A longer one is cut.
 
+## [0.2.8] - 2026-10-24
+
+> Added: an emoji, symbol, ASCII art, kaomoji and emoticon picker for chat, the ASCII art window, journals and replies. Fixed: nick effects over dialogs.
+
+### Added
+- **Emoji picker** - pick emoji, symbols, ASCII art, kaomoji and emoticons for your messages. The emoji button sits after the chat's message box, on /chat and in the sidebar. It is also in the ASCII art window /art opens. On /write and in a post's reply box, it takes the place of the editor's Emoticon button. The picker has five tabs: Emoticons, Kaomoji, Symbols, ASCII art and Emoji. The chat opens it on Emoticons, the editor on Kaomoji, and the art window on ASCII art. Each tab has a search. The search finds a pick by its name, its group, or other words people use for it, as zap for ⚡ or lol for XD. A pick goes into your message at the cursor, and you send it as usual. Your last picks show first on each tab. Cyberspace shows most emoji in chat as a random pixel symbol, so the picker offers only what shows as sent: 81 emoji, 2,456 symbols, 416 ASCII art characters, 181 kaomoji and 91 emoticons. The symbols run from the site's own pixel set to Egyptian hieroglyphs, playing cards, mahjong and domino tiles, music and old scripts. Every kaomoji of the editor's Emoticon list is there. Like any pick, one your browser cannot draw is left out. On by default. Include NSFW kaomoji and emoticons is off by default. It adds an NSFW group to the Kaomoji and Emoticons tabs, with 15 more kaomoji and 11 more emoticons
+
+### Fixed
+- **Nick effects** - an effect plays behind an open Atmospheric Modulator dialog, not over it. Preview still plays over the dialog it is in
+
 ## [0.2.7] - 2026-10-22
 
 > Added: ★★ best chooms, nick animation effects when a choom joins cIRC/sends a notification, custom theme added to backups. Changed: a clearer user menu.

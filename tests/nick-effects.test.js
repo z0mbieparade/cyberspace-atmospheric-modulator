@@ -195,6 +195,8 @@ describe('a choom arriving', () => {
 		addChat();
 		pressPreview();
 		expect(overlayBox()).toEqual(CHAT_BOX);
+		// Over a dialog Preview is pressed in
+		expect(overlays()[0].classList.contains('atmo-effect-over-dialogs')).toBe(true);
 	});
 
 	it('plays Preview over the whole window with no chat open', () => {
@@ -209,6 +211,8 @@ describe('a choom arriving', () => {
 		join(list, 'rex');
 		await settle();
 		expect(overlayBox()).toEqual(CHAT_BOX);
+		// Under any open dialog
+		expect(overlays()[0].classList.contains('atmo-effect-over-dialogs')).toBe(false);
 	});
 
 	it('plays for a ★ choom only while it plays for every choom', async () => {

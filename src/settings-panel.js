@@ -80,6 +80,12 @@ const SETTINGS_SCHEMA = [
 		{ key: 'worldClock', type: 'toggle', label: 'Show city times under cIRC\'s header', default: DEFAULT_FEATURE_CONFIG.worldClock },
 		{ type: 'hint', text: 'Show a list of cities and times under the cIRC header in 12- or 24-hour time. See World Clock settings below.' },
 	]},
+	{ type: 'section', label: 'Emoji picker', fields: [
+		{ key: 'emojiPicker', type: 'toggle', label: 'Add an emoji button', default: DEFAULT_FEATURE_CONFIG.emojiPicker },
+		{ type: 'hint', text: 'Lets you insert emojis, symbols, ASCII art characters, kaomoji or emoticons into the chat, your journal entries, and post replies.' },
+		{ key: 'emojiPickerNsfw', type: 'toggle', label: 'Include NSFW kaomoji and emoticons', default: DEFAULT_FEATURE_CONFIG.emojiPickerNsfw,
+			showWhen: { field: 'emojiPicker', is: true }, sub: true },
+	]},
 ];
 
 /**

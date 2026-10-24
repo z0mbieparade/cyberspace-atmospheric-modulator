@@ -256,29 +256,6 @@ function clampEffectNumber(value, limits, fallback) {
 }
 
 /**
- * What a reader sees as single characters in text, one at a time, so an
- * emoji built from several code points stays whole.
- * @param {string} text
- * @returns {Iterable<string>} read as far as the caller goes, no further
- */
-function* eachGlyph(text) {
-	if (typeof Intl.Segmenter !== 'function') {
-		yield* text;
-		return;
-	}
-	for (const part of new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)) yield part.segment;
-}
-
-/**
- * Text split into what a reader sees as single characters (eachGlyph).
- * @param {string} text
- * @returns {string[]}
- */
-function splitGlyphs(text) {
-	return Array.from(eachGlyph(text));
-}
-
-/**
  * The characters an effect is drawn with: no spaces or control characters,
  * none longer than MAX_GLYPH_LENGTH, up to MAX_EFFECT_GLYPHS.
  * @param {*} glyphs - as typed or saved
@@ -773,8 +750,10 @@ function elementArea(el) {
  *   where it plays, in the viewport (effectArea, windowArea)
  * @param {string} name - who it is for, as the page spells it: its letters
  *   are the characters, when the effect uses their name
+ * @param {boolean} [overDialogs=false] - over the script's dialogs, as a
+ *   Preview in one; a choom's join plays under them
  */
-function playEffect(effect, nameElement, nickColor, area, name) {
+function playEffect(effect, nameElement, nickColor, area, name, overDialogs = false) {
 	if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
 		if (!nameElement) return;
 		const highlight = uiClass('effect-highlight');
@@ -796,6 +775,7 @@ function playEffect(effect, nameElement, nickColor, area, name) {
 
 	const overlay = document.createElement('div');
 	overlay.className = EFFECT_OVERLAY_CLASS;
+	overlay.classList.toggle(uiClass('effect-over-dialogs'), overDialogs);
 	// Fixed over the chat's box, not inside it: the chat's layout and scroll
 	// stay as they are
 	Object.assign(overlay.style, { left: `${area.left}px`, top: `${area.top}px`, width: `${area.width}px`, height: `${area.height}px` });
@@ -1686,7 +1666,7 @@ function previewEffect(effect, button, username) {
 	const name = username ?? (ownUsername && spellingOf(ownUsername, nameElementOnPage(ownUsername))) ?? PREVIEW_NAME;
 	const dialog = button.closest('.' + uiClass('dialog'));
 	const area = (dialog && elementArea(dialog)) ?? effectArea(button);
-	playEffect(effect, button, nickColorOf(nameElementOnPage(name)), area, name);
+	playEffect(effect, button, nickColorOf(nameElementOnPage(name)), area, name, true);
 }
 
 /**

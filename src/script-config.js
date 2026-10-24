@@ -29,7 +29,7 @@ const SETTINGS_TITLE = 'Atmospheric Modulator Settings';
 // The settings tab's section for the whole script, above the Changelog
 // (backup.js); nick colors' help points to it
 const BACKUP_SECTION_TITLE = 'Backup & Troubleshooting';
-const SETTINGS_SECTION_DESCRIPTION = 'Usability features userscript: undither an image, give nicknames a hashed color, keep notes on them, show world times in cIRC, and celebrate chooms joining it. Changes save as you make them.';
+const SETTINGS_SECTION_DESCRIPTION = 'Usability features userscript: undither an image, give nicknames a hashed color, keep notes on users, show world times in cIRC, play a silly animation when users join or message you, and insert emojis in your messages. Changes save as you make them.';
 // Published in users' localStorage: never change it
 const STORAGE_PREFIX = 'atmosphericModulator_';
 const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion', 'settingsSectionsOpen', 'backupNote',
@@ -44,4 +44,6 @@ const GM_STORAGE_KEYS = ['debugMode', 'featureConfig', 'dismissedUpdateVersion',
 	// world-clock
 	'worldClock',
 	// nick-effects
-	'nickEffects', 'nickEffectsOwnUsername'];
+	'nickEffects', 'nickEffectsOwnUsername',
+	// emoji-picker
+	'emojiRecents'];

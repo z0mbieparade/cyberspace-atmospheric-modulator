@@ -1,13 +1,19 @@
 @use 'ui';
 
 // The effect over cIRC's messages, or the whole window where there are none
-// (nick-effects.js places it). Above the script's dialogs, so Preview in
-// one shows; it takes no clicks, so nothing under it stops working
+// (nick-effects.js places it). Under the script's dialogs (999999) and
+// menus, so a choom joining does not cover what you are doing; it takes no
+// clicks, so nothing under it stops working
 .atmo-effect {
 	position: fixed;
-	z-index: 1000000;
+	z-index: 999997;
 	overflow: hidden;
 	pointer-events: none;
+}
+
+// Preview in a dialog plays over it, where you are looking
+.atmo-effect-over-dialogs {
+	z-index: 1000000;
 }
 
 // Each glyph is placed by its animation (nick-effects.js)

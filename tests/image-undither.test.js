@@ -526,6 +526,8 @@ describe('feature config', () => {
 			nickNotes: true,
 			worldClock: false,
 			nickEffects: false,
+			emojiPicker: true,
+			emojiPickerNsfw: false,
 		});
 	});
 });

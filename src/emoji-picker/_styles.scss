@@ -1,0 +1,91 @@
+@use 'ui';
+
+// The button takes a site button's classes, as the chat's send button or the
+// art window's Cancel; this only centers its icon as the site's icons are
+.atmo-emoji-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+// The tabs, as the site's own tab rows: on a rule, the shown one in the
+// text color and underlined, so not by color alone. They sit in the
+// dialog's header, in place of its title; the header's rule is theirs, so
+// they reach down through its padding to it
+.atmo-emoji-tabs {
+	display: flex;
+	gap: var(--spacing-sm);
+	margin-bottom: calc(-1 * var(--spacing-sm));
+}
+
+.atmo-emoji-tab {
+	@include ui.bare-button(var(--spacing-xs));
+	// Readable at 4.5:1 on the dialog's background, as fg-dim alone may not be
+	--atmo-bare-color: var(--atmo-fg-muted);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+
+	// Past the bare button's own padding, which a dialog sets
+	.atmo-dialog & {
+		padding: var(--spacing-xs);
+	}
+
+	&[aria-selected="true"] {
+		--atmo-bare-color: var(--atmo-fg);
+		border-bottom-color: currentColor;
+	}
+}
+
+.atmo-emoji-group h4 {
+	margin: var(--spacing-sm) 0 var(--spacing-xs);
+}
+
+.atmo-emoji-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px;
+}
+
+.atmo-emoji-pick {
+	@include ui.bare-button(var(--spacing-xs));
+	line-height: 1.4;
+	border: 1px solid transparent;
+
+	// In the dialog, past its own button hover rule
+	.atmo-dialog &:hover {
+		border-color: var(--atmo-border);
+	}
+
+	&[hidden] {
+		display: none;
+	}
+}
+
+// Emoji a size up, in the system's emoji fonts (EMOJI_FONT_FAMILY, set by
+// pickButton): the theme's pixel fonts have none
+.atmo-emoji-pick-emoji {
+	font-size: 1.375em;
+	min-width: 1.75em;
+}
+
+// Kaomoji and emoticons keep their spaces, in the theme's font
+.atmo-emoji-pick-kaomoji,
+.atmo-emoji-pick-emoticons {
+	white-space: pre;
+	// An outline each: one face's spaces and punctuation would otherwise run
+	// into the next. Under the pointer, it turns the text color
+	border-color: var(--atmo-border);
+
+	.atmo-dialog &:hover {
+		border-color: var(--atmo-fg);
+	}
+}
+
+.atmo-emoji-status:empty {
+	display: none;
+}
+
+// Apart from the ASCII art window's Cancel and Send group, which it sits before
+.atmo-emoji-button-apart {
+	margin-right: var(--spacing-sm);
+}

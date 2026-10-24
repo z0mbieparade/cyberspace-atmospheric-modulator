@@ -68,6 +68,7 @@ module.exports = {
 		'shared/send-message.js',
 		'shared/ui-menu.js',
 		'shared/usernames.js',
+		'shared/glyphs.js',
 		'header.js',
 		'features.js',
 		'user-menu.js',
@@ -102,6 +103,14 @@ module.exports = {
 		{ scope: 'nick-effects', parts: [
 			'nick-effects/nick-effects.js',
 			'nick-effects/init.js',
+		] },
+		{ scope: 'emoji-picker', parts: [
+			'emoji-picker/site-rule.js',
+			'emoji-picker/emoji-data.js',
+			'emoji-picker/kaomoji.js',
+			'emoji-picker/emoticons.js',
+			'emoji-picker/emoji-picker.js',
+			'emoji-picker/init.js',
 		] },
 		'settings-panel.js',
 		'backup.js',

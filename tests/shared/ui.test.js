@@ -93,6 +93,17 @@ describe('createDialog', () => {
 		expect(document.activeElement).toBe(d.el.querySelector('.atmo-header-close'));
 	});
 
+	it('wraps Tab past a button taken out of the tab order, as a roving grid\'s other picks', () => {
+		const d = ui.createDialog({ title: 'T', content: '<input id="shown"><button id="roving" tabindex="-1">x</button>' });
+		const shown = d.el.querySelector('#shown');
+		const close = d.el.querySelector('.atmo-header-close');
+		shown.focus();
+		key(shown, 'Tab');
+		expect(document.activeElement).toBe(close);
+		key(close, 'Tab', { shiftKey: true });
+		expect(document.activeElement).toBe(shown);
+	});
+
 	it('closes only itself on Escape: the site\'s document handlers never see it', () => {
 		const siteHandler = vi.fn();
 		document.addEventListener('keydown', siteHandler);
